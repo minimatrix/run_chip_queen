@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Run, Chip, Queen",
+    "slug": "run-chip-queen",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "runchipqueen",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#063F2A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.minimatrix.run-chip-queen"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#063F2A",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#063F2A"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

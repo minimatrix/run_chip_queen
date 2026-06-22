@@ -1,0 +1,28 @@
+export const theme = {
+  emerald: '#063F2A',
+  emeraldDark: '#022A1C',
+  mint: '#EAF7EC',
+  white: '#FFFFFF',
+  border: '#E5E7EB',
+  text: '#111827',
+  textSecondary: '#6B7280',
+  textMuted: '#9CA3AF',
+  danger: '#DC2626',
+  success: '#16A34A',
+  cardRadius: 16,
+  buttonRadius: 14,
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  shadowStrong: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+} as const;
