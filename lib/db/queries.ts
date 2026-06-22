@@ -101,6 +101,13 @@ export async function finishGame(
   );
 }
 
+export async function deleteGame(
+  db: SQLiteDatabase,
+  gameId: string,
+): Promise<void> {
+  await db.runAsync('DELETE FROM games WHERE id = ?', [gameId]);
+}
+
 export async function getGamePlayers(
   db: SQLiteDatabase,
   gameId: string,

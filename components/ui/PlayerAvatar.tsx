@@ -9,7 +9,6 @@ type PlayerAvatarProps = {
   onPress?: () => void;
   size?: 'small' | 'medium' | 'large';
   showName?: boolean;
-  isQueenPot?: boolean;
   animateIn?: boolean;
   index?: number;
 };

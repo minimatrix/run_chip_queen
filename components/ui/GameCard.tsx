@@ -71,11 +71,7 @@ export function GameCard({
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
-      <AnimatedPressable
-        onPress={onPress}
-        style={[styles.chipStack, { marginTop: index * 4 }]}
-        scaleTo={0.98}
-      >
+      <AnimatedPressable onPress={onPress} style={styles.pastWrapper} scaleTo={0.98}>
         <View style={styles.pastCard}>
           <Text style={styles.pastName}>{game.name}</Text>
           <Text style={styles.pastMeta}>
@@ -184,8 +180,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.success,
   },
-  chipStack: {
-    marginBottom: -8,
+  pastWrapper: {
+    marginBottom: 10,
   },
   pastCard: {
     backgroundColor: theme.ivory,

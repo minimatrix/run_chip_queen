@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeltBackground } from '@/components/ui/FeltBackground';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { LeaderCard } from '@/components/ui/LeaderCard';
+import { LeaderboardPanel } from '@/components/ui/LeaderboardPanel';
 import { MoneyCounter } from '@/components/ui/MoneyCounter';
 import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -68,14 +68,7 @@ export default function TotalsScreen() {
             </View>
           </GlassPanel>
 
-          {sorted.map((total, index) => (
-            <LeaderCard
-              key={total.playerId}
-              total={total}
-              rank={index}
-              showRemaining
-            />
-          ))}
+          <LeaderboardPanel totals={sorted} showRemaining />
 
           <PrimaryGoldButton
             title="Add Next Round"
@@ -93,7 +86,7 @@ export default function TotalsScreen() {
           <SecondaryGreenButton
             title="Game History"
             onPress={() =>
-              router.push({ pathname: '/game/[id]/history', params: { id } })
+              router.navigate({ pathname: '/game/[id]/history', params: { id } })
             }
             style={styles.btn}
           />

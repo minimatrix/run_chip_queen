@@ -14,15 +14,12 @@ import * as Haptics from 'expo-haptics';
 import { Trophy } from 'lucide-react-native';
 import { Confetti } from '@/components/ui/Confetti';
 import { FeltBackground } from '@/components/ui/FeltBackground';
-import { LeaderCard } from '@/components/ui/LeaderCard';
+import { LeaderboardPanel } from '@/components/ui/LeaderboardPanel';
+import { GameRoundHistoryList } from '@/components/ui/GameRoundHistoryList';
 import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
 import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
-import { SettlementCard } from '@/components/ui/SettlementCard';
 import { theme, fonts } from '@/constants/theme';
-import {
-  calculatePlayerTotals,
-  computeSettlementTransfers,
-} from '@/lib/calculations';
+import { calculatePlayerTotals } from '@/lib/calculations';
 import { buildSettleUpSummary, formatMoney } from '@/lib/format';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -58,17 +55,16 @@ export default function SettleUpScreen() {
     activeGameRounds,
     activeGamePlayers,
   );
-  const sorted = [...totals].sort((a, b) => b.total - a.total);
-  const transfers = computeSettlementTransfers(totals);
 
   const handleShare = async () => {
+    const sorted = [...totals].sort((a, b) => b.remaining - a.remaining);
     const summary = [
       `Run, Chip, Queen — ${activeGame.name}`,
       '',
-      'Final Totals:',
+      'Final Standings:',
       ...sorted.map(
         (t) =>
-          `${t.name}: Run ${formatMoney(t.run)} | Chip ${formatMoney(t.chip)} | Queen ${formatMoney(t.queen)} | Total ${formatMoney(t.total)}`,
+          `${t.name}: Run ${formatMoney(t.run)} | Chip ${formatMoney(t.chip)} | Queen ${formatMoney(t.queen)} | Finished ${formatMoney(t.remaining)}`,
       ),
       '',
       'Settle Up:',
@@ -94,25 +90,20 @@ export default function SettleUpScreen() {
           </Animated.View>
 
           <Text style={styles.sectionTitle}>Final Standings</Text>
-          {sorted.map((total, index) => (
-            <LeaderCard key={total.playerId} total={total} rank={index} />
-          ))}
+          <LeaderboardPanel
+            totals={totals}
+            showRemaining
+            balanceLabel="Finished"
+          />
 
-          {transfers.length > 0 ? (
-            <View style={styles.settleSection}>
-              <Text style={styles.sectionTitle}>Settlement</Text>
-              {transfers.map((transfer, index) => (
-                <SettlementCard
-                  key={`${transfer.fromId}-${transfer.toId}-${index}`}
-                  fromName={transfer.fromName}
-                  fromColor={transfer.fromColor}
-                  toName={transfer.toName}
-                  toColor={transfer.toColor}
-                  amountPence={transfer.amountPence}
-                />
-              ))}
-            </View>
-          ) : null}
+          <Text style={styles.sectionTitle}>Round History</Text>
+          <GameRoundHistoryList
+            game={activeGame}
+            players={activeGamePlayers}
+            rounds={activeGameRounds}
+            allowDelete={false}
+            embedded
+          />
 
           <PrimaryGoldButton
             title="Share Summary"
@@ -179,10 +170,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 14,
     marginTop: 8,
-  },
-  settleSection: {
-    marginTop: 8,
-    marginBottom: 16,
   },
   btn: {
     marginTop: 12,

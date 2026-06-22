@@ -1,5 +1,4 @@
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, fonts } from '@/constants/theme';
 
 type ScreenHeaderProps = {
@@ -17,17 +16,8 @@ export function ScreenHeader({
   dark = true,
   style,
 }: ScreenHeaderProps) {
-  const insets = useSafeAreaInsets();
-
   return (
-    <View
-      style={[
-        styles.container,
-        { paddingTop: insets.top + 16 },
-        dark && styles.dark,
-        style,
-      ]}
-    >
+    <View style={[styles.container, dark && styles.dark, style]}>
       <Text style={[styles.suit, dark && styles.suitDark]}>{suit}</Text>
       <Text style={[styles.title, dark && styles.titleDark]}>{title}</Text>
       {subtitle ? (
@@ -41,23 +31,24 @@ export function ScreenHeader({
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 20,
+    paddingTop: 4,
+    paddingBottom: 16,
     paddingHorizontal: 20,
   },
   dark: {
     backgroundColor: 'transparent',
   },
   suit: {
-    fontSize: 22,
+    fontSize: 20,
     color: theme.gold,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   suitDark: {
     color: theme.gold,
   },
   title: {
     fontFamily: fonts.serifBold,
-    fontSize: 28,
+    fontSize: 26,
     color: theme.text,
     letterSpacing: 0.5,
   },
@@ -68,7 +59,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansMedium,
     fontSize: 14,
     color: theme.textSecondary,
-    marginTop: 6,
+    marginTop: 4,
   },
   subtitleDark: {
     color: theme.muted,

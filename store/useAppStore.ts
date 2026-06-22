@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { getDatabase, resetDatabase } from '@/lib/db';
 import {
   deletePlayer as dbDeletePlayer,
+  deleteGame as dbDeleteGame,
   deleteRound as dbDeleteRound,
   finishGame as dbFinishGame,
   generateId,
@@ -53,6 +54,7 @@ type AppStore = {
     startingBalancePence: number,
   ) => Promise<string>;
   finishGame: (gameId: string) => Promise<void>;
+  deleteGame: (gameId: string) => Promise<void>;
   saveRound: (round: Omit<Round, 'id' | 'createdAt'> & { id?: string }) => Promise<void>;
   deleteRound: (roundId: string) => Promise<void>;
   addGlobalPlayer: (name: string) => Promise<Player>;
@@ -180,6 +182,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (get().activeGame?.id === gameId) {
       await get().loadGame(gameId);
     }
+  },
+
+  deleteGame: async (gameId: string) => {
+    const db = await getDatabase();
+    await dbDeleteGame(db, gameId);
+    if (get().activeGame?.id === gameId) {
+      get().clearActiveGame();
+    }
+    await get().refreshGames();
   },
 
   saveRound: async (roundData) => {

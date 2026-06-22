@@ -3,8 +3,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { theme, fonts } from '@/constants/theme';
 import { getInitials } from '@/lib/format';
@@ -18,8 +22,85 @@ type PokerChipProps = {
   onPress?: () => void;
   size?: 'small' | 'medium' | 'large';
   showName?: boolean;
-  isQueenPot?: boolean;
+  onDark?: boolean;
+  inline?: boolean;
 };
+
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+  const angleRad = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) };
+}
+
+function describeRingWedge(
+  cx: number,
+  cy: number,
+  rInner: number,
+  rOuter: number,
+  startAngle: number,
+  endAngle: number,
+) {
+  const startOuter = polarToCartesian(cx, cy, rOuter, endAngle);
+  const endOuter = polarToCartesian(cx, cy, rOuter, startAngle);
+  const startInner = polarToCartesian(cx, cy, rInner, endAngle);
+  const endInner = polarToCartesian(cx, cy, rInner, startAngle);
+  const largeArc = endAngle - startAngle <= 180 ? '0' : '1';
+  return `M ${startOuter.x} ${startOuter.y} A ${rOuter} ${rOuter} 0 ${largeArc} 0 ${endOuter.x} ${endOuter.y} L ${endInner.x} ${endInner.y} A ${rInner} ${rInner} 0 ${largeArc} 1 ${startInner.x} ${startInner.y} Z`;
+}
+
+function ChipFace({
+  size,
+  color,
+  fontSize,
+  initials,
+}: {
+  size: number;
+  color: string;
+  fontSize: number;
+  initials: string;
+}) {
+  const segments = 12;
+  const cx = size / 2;
+  const outerR = size / 2 - 1;
+  const stripeInnerR = outerR * 0.78;
+  const innerSize = size * 0.58;
+
+  return (
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size}>
+        <Path
+          d={`M ${cx} ${cx - outerR} A ${outerR} ${outerR} 0 1 1 ${cx - 0.01} ${cx - outerR} Z`}
+          fill={color}
+        />
+        {Array.from({ length: segments }).map((_, i) => {
+          const start = (360 / segments) * i;
+          const end = (360 / segments) * (i + 1);
+          return (
+            <Path
+              key={i}
+              d={describeRingWedge(cx, cx, stripeInnerR, outerR, start, end)}
+              fill={i % 2 === 0 ? color : '#FFFFFF'}
+            />
+          );
+        })}
+      </Svg>
+      <View
+        style={[
+          styles.faceInner,
+          {
+            backgroundColor: color,
+            borderRadius: innerSize / 2,
+            width: innerSize,
+            height: innerSize,
+            top: (size - innerSize) / 2,
+            left: (size - innerSize) / 2,
+          },
+        ]}
+      >
+        <Text style={[styles.initials, { fontSize }]}>{initials}</Text>
+      </View>
+    </View>
+  );
+}
 
 export function PokerChip({
   player,
@@ -28,15 +109,15 @@ export function PokerChip({
   onPress,
   size = 'medium',
   showName = true,
-  isQueenPot = false,
+  onDark = false,
+  inline = false,
 }: PokerChipProps) {
   const ringScale = useSharedValue(1);
-
   const circleSize = size === 'small' ? 44 : size === 'large' ? 64 : 54;
-  const fontSize = size === 'small' ? 13 : size === 'large' ? 20 : 16;
+  const fontSize = size === 'small' ? 12 : size === 'large' ? 18 : 14;
 
   useEffect(() => {
-    ringScale.value = withSpring(selected ? 1.1 : 1, {
+    ringScale.value = withSpring(selected ? 1.08 : 1, {
       damping: 12,
       stiffness: 200,
     });
@@ -56,44 +137,33 @@ export function PokerChip({
 
   const content = (
     <View style={styles.wrapper}>
-      <Animated.View style={[styles.chipOuter, chipStyle]}>
+      <Animated.View style={[styles.chipOuter, inline && styles.chipOuterInline, chipStyle]}>
         {selected ? (
           <View
             style={[
-              styles.goldRing,
+              styles.selectRing,
               {
-                width: circleSize + 12,
-                height: circleSize + 12,
-                borderRadius: (circleSize + 12) / 2,
+                width: circleSize + 10,
+                height: circleSize + 10,
+                borderRadius: (circleSize + 10) / 2,
               },
             ]}
           />
         ) : null}
-        <View
-          style={[
-            styles.chip,
-            {
-              width: circleSize,
-              height: circleSize,
-              borderRadius: circleSize / 2,
-              backgroundColor: player.color,
-            },
-            disabled && styles.chipDisabled,
-          ]}
-        >
-          <View style={styles.chipInnerRing} />
-          <Text style={[styles.initials, { fontSize }]}>
-            {getInitials(player.name)}
-          </Text>
-          {selected && isQueenPot ? (
-            <Text style={styles.crown}>👑</Text>
-          ) : null}
+        <View style={[styles.chipShadow, disabled && styles.chipDisabled]}>
+          <ChipFace
+            size={circleSize}
+            color={player.color}
+            fontSize={fontSize}
+            initials={getInitials(player.name)}
+          />
         </View>
       </Animated.View>
       {showName ? (
         <Text
           style={[
             styles.name,
+            onDark && styles.nameOnDark,
             selected && styles.nameSelected,
             disabled && styles.nameDisabled,
           ]}
@@ -110,7 +180,7 @@ export function PokerChip({
       <AnimatedPressable
         onPress={handlePress}
         disabled={disabled}
-        style={styles.pressable}
+        style={[styles.pressable, inline && styles.pressableInline]}
         scaleTo={0.92}
       >
         {content}
@@ -118,7 +188,7 @@ export function PokerChip({
     );
   }
 
-  return <View style={styles.pressable}>{content}</View>;
+  return <View style={[styles.pressable, inline && styles.pressableInline]}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -126,6 +196,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: 76,
     marginBottom: 4,
+  },
+  pressableInline: {
+    width: 'auto',
+    marginBottom: 0,
   },
   wrapper: {
     alignItems: 'center',
@@ -135,56 +209,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 6,
   },
-  goldRing: {
-    position: 'absolute',
-    borderWidth: 3,
-    borderColor: theme.gold,
-    ...theme.shadowGold,
+  chipOuterInline: {
+    marginBottom: 0,
   },
-  chip: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.35)',
+  selectRing: {
+    position: 'absolute',
+    borderWidth: 2.5,
+    borderColor: theme.primary,
     ...theme.shadowSoft,
   },
-  chipInnerRing: {
-    position: 'absolute',
-    width: '75%',
-    height: '75%',
+  chipShadow: {
     borderRadius: 999,
-    borderWidth: 2,
-    borderColor: 'rgba(0,0,0,0.12)',
-    borderStyle: 'dashed',
+    ...theme.shadowSoft,
   },
   chipDisabled: {
     opacity: 0.35,
   },
+  faceInner: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   initials: {
     fontFamily: fonts.sansBold,
     color: theme.ivory,
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowColor: 'rgba(0,0,0,0.35)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  crown: {
-    position: 'absolute',
-    top: -10,
-    fontSize: 14,
-  },
   name: {
-    fontFamily: fonts.sansMedium,
+    fontFamily: fonts.sansBold,
     fontSize: 11,
-    color: theme.muted,
+    color: theme.text,
     textAlign: 'center',
     maxWidth: 72,
   },
+  nameOnDark: {
+    color: theme.ivory,
+  },
   nameSelected: {
-    color: theme.gold,
-    fontFamily: fonts.sansBold,
+    color: theme.primary,
   },
   nameDisabled: {
     textDecorationLine: 'line-through',
-    opacity: 0.5,
+    opacity: 0.45,
   },
 });

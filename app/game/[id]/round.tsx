@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, List } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { FeltBackground } from '@/components/ui/FeltBackground';
-import { LeaderCard } from '@/components/ui/LeaderCard';
+import { LeaderboardPanel } from '@/components/ui/LeaderboardPanel';
 import { PotCard } from '@/components/ui/PotCard';
 import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
 import { RoundHeroCard } from '@/components/ui/RoundHeroCard';
@@ -193,7 +193,7 @@ export default function RoundScreen() {
       });
 
       if (editingRound) {
-        router.push({ pathname: '/game/[id]/history', params: { id } });
+        router.navigate({ pathname: '/game/[id]/history', params: { id } });
         return;
       }
 
@@ -221,7 +221,15 @@ export default function RoundScreen() {
             <ChevronLeft size={26} color={theme.gold} />
           </AnimatedPressable>
           <Text style={styles.gameName}>{activeGame.name}</Text>
-          <View style={styles.backBtn} />
+          <AnimatedPressable
+            onPress={() =>
+              router.navigate({ pathname: '/game/[id]/history', params: { id } })
+            }
+            style={styles.backBtn}
+            accessibilityLabel="Round history"
+          >
+            <List size={22} color={theme.gold} />
+          </AnimatedPressable>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
@@ -251,15 +259,11 @@ export default function RoundScreen() {
 
             <TwoHandsBanner player={twoHandsPlayer} />
 
-            {sortedTotals.slice(0, 3).map((total, index) => (
-              <LeaderCard
-                key={total.playerId}
-                total={total}
-                rank={index}
-                showRemaining
-                compact
-              />
-            ))}
+            <LeaderboardPanel
+              totals={sortedTotals}
+              showRemaining
+              compact
+            />
 
             <PotCard
               type="run"
@@ -269,7 +273,6 @@ export default function RoundScreen() {
               selectedId={runWinnerId}
               disabledPlayerIds={disabledPlayerIds}
               onSelect={setRunWinnerId}
-              index={0}
             />
             <PotCard
               type="chip"
@@ -279,7 +282,6 @@ export default function RoundScreen() {
               selectedId={chipWinnerId}
               disabledPlayerIds={disabledPlayerIds}
               onSelect={setChipWinnerId}
-              index={1}
             />
             <PotCard
               type="queen"
@@ -289,7 +291,6 @@ export default function RoundScreen() {
               selectedId={queenWinnerId}
               disabledPlayerIds={disabledPlayerIds}
               onSelect={setQueenWinnerId}
-              index={2}
             />
 
             <Text style={styles.notesLabel}>Notes (optional)</Text>

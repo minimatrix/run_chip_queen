@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CardSuitPattern } from '@/components/ui/CardSuitPattern';
 import { FeltBackground } from '@/components/ui/FeltBackground';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { GameCard } from '@/components/ui/GameCard';
+import { PastGameCard } from '@/components/ui/PastGameCard';
 import { PremiumEmptyState } from '@/components/ui/PremiumEmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme, fonts } from '@/constants/theme';
 import { useAppStore } from '@/store/useAppStore';
+import type { GameWithMeta } from '@/lib/types';
 
 export default function GamesScreen() {
   const router = useRouter();
   const games = useAppStore((s) => s.games);
   const getGamePreview = useAppStore((s) => s.getGamePreview);
+  const deleteGame = useAppStore((s) => s.deleteGame);
 
   const activeGame = games.find((g) => g.status === 'active');
   const pastGames = games.filter((g) => g.id !== activeGame?.id);
@@ -54,6 +57,21 @@ export default function GamesScreen() {
     }
   };
 
+  const handleDeleteGame = (game: GameWithMeta) => {
+    Alert.alert(
+      'Delete Game',
+      `Delete "${game.name}" and all its rounds? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteGame(game.id),
+        },
+      ],
+    );
+  };
+
   return (
     <FeltBackground>
       <CardSuitPattern opacity={0.04} />
@@ -89,11 +107,12 @@ export default function GamesScreen() {
                 <View style={styles.pastSection}>
                   <Text style={styles.pastTitle}>Past Tables</Text>
                   {pastGames.map((game, index) => (
-                    <GameCard
+                    <PastGameCard
                       key={game.id}
                       game={game}
                       index={index}
                       onPress={() => handleGamePress(game.id, game.status)}
+                      onDelete={() => handleDeleteGame(game)}
                     />
                   ))}
                 </View>
