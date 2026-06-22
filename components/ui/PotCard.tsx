@@ -80,7 +80,10 @@ export function PotCard({
 
   const handleSelect = (playerId: string) => {
     if (disabledPlayerIds.has(playerId)) {
-      Alert.alert('Out of funds', 'This player cannot afford another round.');
+      Alert.alert(
+        'Not in this round',
+        'This player did not buy into the current round.',
+      );
       return;
     }
     onSelect(selectedId === playerId ? null : playerId);

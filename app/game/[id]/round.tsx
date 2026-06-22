@@ -25,7 +25,7 @@ import { TwoHandsBanner } from '@/components/ui/TwoHandsBanner';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { theme, fonts } from '@/constants/theme';
 import {
-  calculatePlayerTotals,
+  calculatePlayerTotalsForRoundEntry,
   getActivePlayerIdsForRound,
   getCurrentPotValues,
   getPlayerRoundCostPence,
@@ -115,7 +115,7 @@ export default function RoundScreen() {
       activeGamePlayers,
       priorRounds,
     );
-    const currentTotals = calculatePlayerTotals(
+    const currentTotals = calculatePlayerTotalsForRoundEntry(
       activeGame,
       priorRounds,
       activeGamePlayers,
@@ -127,7 +127,9 @@ export default function RoundScreen() {
       nextRoundNumber,
     );
     const disabledPlayerIds = new Set(
-      currentTotals.filter((row) => !row.canPlay).map((row) => row.playerId),
+      currentTotals
+        .filter((row) => row.inCurrentRound === false)
+        .map((row) => row.playerId),
     );
     const sortedTotals = [...currentTotals].sort((a, b) => b.total - a.total);
     const hasCarryover =
@@ -263,6 +265,7 @@ export default function RoundScreen() {
               totals={sortedTotals}
               showRemaining
               compact
+              useInCurrentRoundForOut
             />
 
             <PotCard

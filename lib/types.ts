@@ -42,7 +42,10 @@ export type PlayerTotal = {
   contributed: number;
   net: number;
   remaining: number;
+  /** Can afford to buy into the next round. */
   canPlay: boolean;
+  /** Bought into the round being entered (round screen only). */
+  inCurrentRound?: boolean;
 };
 
 export type GameWithMeta = Game & {

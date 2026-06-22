@@ -306,17 +306,18 @@ export function getTwoHandsPlayerForRound(
   return null;
 }
 
-export function calculatePlayerTotals(
+function buildPlayerTotals(
   game: Game,
-  rounds: Round[],
   players: Player[],
+  playerStates: Map<string, PlayerSimState>,
+  options: { inCurrentRound?: Set<string> } = {},
 ): PlayerTotal[] {
   const playerRoundCost = getPlayerRoundCostPence(game);
-  const simulation = simulateGame(game, players, rounds);
+  const { inCurrentRound } = options;
 
   return players
     .map((player) => {
-      const state = simulation.players.get(player.id);
+      const state = playerStates.get(player.id);
       const balance = state?.balance ?? game.startingBalancePence ?? 600;
       const run = state?.run ?? 0;
       const chip = state?.chip ?? 0;
@@ -336,9 +337,43 @@ export function calculatePlayerTotals(
         net: total - contributed,
         remaining: Math.max(0, balance),
         canPlay: balance >= playerRoundCost,
+        ...(inCurrentRound !== undefined
+          ? { inCurrentRound: inCurrentRound.has(player.id) }
+          : {}),
       };
     })
     .sort((a, b) => b.remaining - a.remaining);
+}
+
+export function calculatePlayerTotals(
+  game: Game,
+  rounds: Round[],
+  players: Player[],
+): PlayerTotal[] {
+  const simulation = simulateGame(game, players, rounds);
+  return buildPlayerTotals(game, players, simulation.players);
+}
+
+/** Totals for the round entry screen — includes buy-in for the round being played. */
+export function calculatePlayerTotalsForRoundEntry(
+  game: Game,
+  priorRounds: Round[],
+  players: Player[],
+): PlayerTotal[] {
+  const playerRoundCost = getPlayerRoundCostPence(game);
+  const simulation = simulateGame(game, players, priorRounds);
+  const inCurrentRound = new Set(simulation.activePlayerIds);
+
+  for (const playerId of inCurrentRound) {
+    const state = simulation.players.get(playerId);
+    if (!state) continue;
+    state.balance -= playerRoundCost;
+    state.contributed += playerRoundCost;
+  }
+
+  return buildPlayerTotals(game, players, simulation.players, {
+    inCurrentRound,
+  });
 }
 
 export function getTotalGameValuePence(

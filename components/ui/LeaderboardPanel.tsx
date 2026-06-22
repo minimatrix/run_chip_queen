@@ -12,13 +12,28 @@ type LeaderboardPanelProps = {
   showRemaining?: boolean;
   compact?: boolean;
   balanceLabel?: string;
+  /** When true, only players not in the current round show as Out. */
+  useInCurrentRoundForOut?: boolean;
 };
+
+function isPlayerOut(
+  row: PlayerTotal,
+  showRemaining: boolean,
+  useInCurrentRoundForOut: boolean,
+): boolean {
+  if (!showRemaining) return false;
+  if (useInCurrentRoundForOut && row.inCurrentRound !== undefined) {
+    return !row.inCurrentRound;
+  }
+  return !row.canPlay;
+}
 
 export function LeaderboardPanel({
   totals,
   showRemaining = false,
   compact = false,
   balanceLabel = 'Left',
+  useInCurrentRoundForOut = false,
 }: LeaderboardPanelProps) {
   const sorted = [...totals].sort((a, b) =>
     showRemaining ? b.remaining - a.remaining : b.total - a.total,
@@ -45,7 +60,8 @@ export function LeaderboardPanel({
           style={[
             styles.row,
             index % 2 === 1 && styles.rowAlt,
-            !row.canPlay && showRemaining && styles.rowOut,
+            isPlayerOut(row, showRemaining, useInCurrentRoundForOut) &&
+              styles.rowOut,
           ]}
         >
           <View style={[styles.nameCol, styles.nameCell]}>
@@ -76,13 +92,14 @@ export function LeaderboardPanel({
               styles.cell,
               styles.totalCol,
               styles.totalValue,
-              !row.canPlay && showRemaining && styles.out,
+              isPlayerOut(row, showRemaining, useInCurrentRoundForOut) &&
+                styles.out,
             ]}
           >
             {showRemaining
-              ? row.canPlay
-                ? formatMoney(row.remaining)
-                : 'Out'
+              ? isPlayerOut(row, showRemaining, useInCurrentRoundForOut)
+                ? 'Out'
+                : formatMoney(row.remaining)
               : formatMoney(row.total)}
           </Text>
         </View>
