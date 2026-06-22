@@ -7,7 +7,7 @@ import { TotalsTable } from '@/components/TotalsTable';
 import { theme } from '@/constants/theme';
 import {
   calculatePlayerTotals,
-  getRoundTotalPence,
+  getAverageRoundValuePence,
   getTotalGameValuePence,
 } from '@/lib/calculations';
 import { useAppStore } from '@/store/useAppStore';
@@ -24,7 +24,11 @@ export default function TotalsScreen() {
     activeGameRounds,
     activeGamePlayers,
   );
-  const roundTotal = getRoundTotalPence(activeGame, activeGamePlayers);
+  const roundTotal = getAverageRoundValuePence(
+    activeGame,
+    activeGameRounds,
+    activeGamePlayers,
+  );
   const gameValue = getTotalGameValuePence(
     activeGame,
     activeGameRounds,

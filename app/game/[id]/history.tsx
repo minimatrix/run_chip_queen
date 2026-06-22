@@ -7,7 +7,6 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { theme } from '@/constants/theme';
 import { formatStake } from '@/lib/format';
 import {
-  getPotValuePence,
   getPotValuesForRound,
   getRoundPayouts,
 } from '@/lib/calculations';
@@ -24,8 +23,6 @@ export default function HistoryScreen() {
   } = useAppStore();
 
   if (!activeGame) return null;
-
-  const basePotValue = getPotValuePence(activeGame, activeGamePlayers);
 
   const getPlayerName = (playerId?: string | null) => {
     if (!playerId) return '—';
@@ -70,14 +67,16 @@ export default function HistoryScreen() {
           contentContainerStyle={styles.list}
           renderItem={({ item }) => {
             const potValues = getPotValuesForRound(
+              activeGame,
+              activeGamePlayers,
               activeGameRounds,
               item.roundNumber,
-              basePotValue,
             );
             const payouts = getRoundPayouts(
+              activeGame,
+              activeGamePlayers,
               activeGameRounds,
               item,
-              basePotValue,
             );
 
             return (

@@ -15,6 +15,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { theme } from '@/constants/theme';
 import {
   calculatePlayerTotals,
+  getActivePlayerIdsForRound,
   getCurrentPotValues,
   getPlayerRoundCostPence,
   getPotValuePence,
@@ -83,7 +84,6 @@ export default function RoundScreen() {
 
   if (!activeGame) return null;
 
-  const potValue = getPotValuePence(activeGame, activeGamePlayers);
   const playerRoundCost = getPlayerRoundCostPence(activeGame);
 
   const priorRounds = getRoundsForDisplay(activeGameRounds, {
@@ -91,7 +91,17 @@ export default function RoundScreen() {
     upToRoundNumber: editingRound ? undefined : nextRoundNumber,
   });
 
-  const currentPotValues = getCurrentPotValues(priorRounds, potValue, true);
+  const activePlayerIds = getActivePlayerIdsForRound(
+    activeGame,
+    activeGamePlayers,
+    priorRounds,
+  );
+  const basePotValue = getPotValuePence(activeGame, activePlayerIds.length);
+  const currentPotValues = getCurrentPotValues(
+    activeGame,
+    activeGamePlayers,
+    priorRounds,
+  );
 
   const currentTotals = calculatePlayerTotals(
     activeGame,
@@ -171,12 +181,13 @@ export default function RoundScreen() {
       <View style={styles.banner}>
         <Text style={styles.bannerText}>
           Base stake: {formatStake(activeGame.stakePerPotPence)} in (
-          {formatStake(potValue)} per pot) ·{' '}
-          {formatStake(playerRoundCost)} per player per round
+          {formatStake(basePotValue)} per pot) ·{' '}
+          {formatStake(playerRoundCost)} per player · {activePlayerIds.length}{' '}
+          playing
         </Text>
-        {(currentPotValues.run > potValue ||
-          currentPotValues.chip > potValue ||
-          currentPotValues.queen > potValue) && (
+        {(currentPotValues.run > basePotValue ||
+          currentPotValues.chip > basePotValue ||
+          currentPotValues.queen > basePotValue) && (
           <Text style={styles.bannerSubtext}>
             Carryover active — pot values below include rolled-over amounts
           </Text>
@@ -192,7 +203,7 @@ export default function RoundScreen() {
         <PotSelector
           title="Run Pot"
           potValuePence={currentPotValues.run}
-          basePotValuePence={potValue}
+          basePotValuePence={basePotValue}
           players={activeGamePlayers}
           selectedId={runWinnerId}
           disabledPlayerIds={disabledPlayerIds}
@@ -201,7 +212,7 @@ export default function RoundScreen() {
         <PotSelector
           title="Chip Pot"
           potValuePence={currentPotValues.chip}
-          basePotValuePence={potValue}
+          basePotValuePence={basePotValue}
           players={activeGamePlayers}
           selectedId={chipWinnerId}
           disabledPlayerIds={disabledPlayerIds}
@@ -210,7 +221,7 @@ export default function RoundScreen() {
         <PotSelector
           title="Queen Pot"
           potValuePence={currentPotValues.queen}
-          basePotValuePence={potValue}
+          basePotValuePence={basePotValue}
           players={activeGamePlayers}
           selectedId={queenWinnerId}
           disabledPlayerIds={disabledPlayerIds}
