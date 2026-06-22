@@ -19,6 +19,7 @@ import {
   updateRound as dbUpdateRound,
   updateSettings as dbUpdateSettings,
 } from '@/lib/db/queries';
+import { calculatePlayerTotals } from '@/lib/calculations';
 import { pickPlayerColor } from '@/lib/colors';
 import type {
   AppSettings,
@@ -42,6 +43,9 @@ type AppStore = {
   refreshGlobalPlayers: () => Promise<void>;
   loadGame: (gameId: string) => Promise<void>;
   clearActiveGame: () => void;
+  getGamePreview: (
+    gameId: string,
+  ) => Promise<{ rounds: number; leader?: string } | null>;
   createGame: (
     name: string,
     stakePerPotPence: number,
@@ -110,6 +114,22 @@ export const useAppStore = create<AppStore>((set, get) => ({
       activeGamePlayers: [],
       activeGameRounds: [],
     });
+  },
+
+  getGamePreview: async (gameId: string) => {
+    const db = await getDatabase();
+    const game = await getGame(db, gameId);
+    if (!game) return null;
+
+    const [players, rounds] = await Promise.all([
+      getGamePlayers(db, gameId),
+      getGameRounds(db, gameId),
+    ]);
+
+    const totals = calculatePlayerTotals(game, rounds, players);
+    const leader = [...totals].sort((a, b) => b.total - a.total)[0]?.name;
+
+    return { rounds: rounds.length, leader };
   },
 
   createGame: async (name, stakePerPotPence, playerNames, startingBalancePence) => {

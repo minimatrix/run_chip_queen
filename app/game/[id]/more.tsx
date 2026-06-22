@@ -1,8 +1,13 @@
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { AppHeader } from '@/components/AppHeader';
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { theme } from '@/constants/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FeltBackground } from '@/components/ui/FeltBackground';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
+import { theme, fonts } from '@/constants/theme';
+import { formatStake } from '@/lib/format';
 import { useAppStore } from '@/store/useAppStore';
 
 export default function MoreScreen() {
@@ -33,33 +38,37 @@ export default function MoreScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <AppHeader title="More" subtitle={activeGame.name} />
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Game Info</Text>
-          <InfoRow label="Name" value={activeGame.name} />
-          <InfoRow
-            label="Stake"
-            value={`${activeGame.stakePerPotPence}p per pot`}
+    <FeltBackground>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader title="More" subtitle={activeGame.name} suit="♠" />
+        <ScrollView contentContainerStyle={styles.content}>
+          <GlassPanel style={styles.section}>
+            <Text style={styles.sectionTitle}>♦ Table Info</Text>
+            <InfoRow label="Name" value={activeGame.name} />
+            <InfoRow
+              label="Stake"
+              value={`${formatStake(activeGame.stakePerPotPence)} per pot`}
+            />
+            <InfoRow
+              label="Status"
+              value={activeGame.status === 'active' ? 'At the table' : 'Finished'}
+            />
+          </GlassPanel>
+
+          <PrimaryGoldButton
+            title="End Game & Settle Up"
+            onPress={handleEndGame}
+            disabled={activeGame.status === 'finished'}
           />
-          <InfoRow label="Status" value={activeGame.status} />
-        </View>
 
-        <PrimaryButton
-          title="End Game & Settle Up"
-          onPress={handleEndGame}
-          disabled={activeGame.status === 'finished'}
-        />
-
-        <PrimaryButton
-          title="Back to Games"
-          variant="outline"
-          onPress={() => router.replace('/(tabs)')}
-          style={styles.btn}
-        />
-      </ScrollView>
-    </View>
+          <SecondaryGreenButton
+            title="Back to Games"
+            onPress={() => router.replace('/(tabs)')}
+            style={styles.btn}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    </FeltBackground>
   );
 }
 
@@ -73,44 +82,39 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   content: {
     padding: 20,
   },
   section: {
-    backgroundColor: theme.white,
-    borderRadius: theme.cardRadius,
     padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: theme.border,
-    ...theme.shadow,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.emerald,
-    marginBottom: 12,
+    fontFamily: fonts.sansBold,
+    fontSize: 12,
+    color: theme.gold,
+    marginBottom: 14,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.border,
+    borderBottomColor: 'rgba(217, 183, 93, 0.2)',
   },
   label: {
+    fontFamily: fonts.sansMedium,
     fontSize: 14,
     color: theme.textSecondary,
   },
   value: {
+    fontFamily: fonts.sansBold,
     fontSize: 14,
-    fontWeight: '600',
     color: theme.text,
   },
   btn: {

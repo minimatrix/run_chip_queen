@@ -2,19 +2,22 @@ import { useState } from 'react';
 import {
   Alert,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Check, Pencil, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { AppHeader } from '@/components/AppHeader';
-import { EmptyState } from '@/components/EmptyState';
-import { PlayerChip } from '@/components/PlayerChip';
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { theme } from '@/constants/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FeltBackground } from '@/components/ui/FeltBackground';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
+import { PremiumEmptyState } from '@/components/ui/PremiumEmptyState';
+import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
+import { theme, fonts } from '@/constants/theme';
 import { useAppStore } from '@/store/useAppStore';
 import type { Player } from '@/lib/types';
 
@@ -55,106 +58,111 @@ export default function PlayersScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <AppHeader
-        title="Players"
-        subtitle="Manage saved players for quick reuse."
-      />
-      <View style={styles.addSection}>
-        <TextInput
-          style={styles.input}
-          placeholder="Player name"
-          placeholderTextColor={theme.textMuted}
-          value={name}
-          onChangeText={setName}
-          onSubmitEditing={handleAdd}
-          returnKeyType="done"
+    <FeltBackground>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader
+          title="Players"
+          subtitle="Saved players for quick deal-in."
+          suit="♥"
         />
-        <PrimaryButton
-          title="Add"
-          onPress={handleAdd}
-          disabled={!name.trim()}
-          style={styles.addButton}
-        />
-      </View>
-      {globalPlayers.length === 0 ? (
-        <EmptyState
-          icon="person-add-outline"
-          title="No saved players"
-          subtitle="Add players here to reuse them in new games."
-        />
-      ) : (
-        <FlatList
-          data={globalPlayers}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <PlayerChip player={item} showName={false} size="small" />
-              {editingId === item.id ? (
-                <TextInput
-                  style={styles.editInput}
-                  value={editName}
-                  onChangeText={setEditName}
-                  autoFocus
-                  onSubmitEditing={() => handleSaveEdit(item)}
-                />
-              ) : (
-                <Text style={styles.playerName}>{item.name}</Text>
-              )}
-              <View style={styles.actions}>
+        <View style={styles.addSection}>
+          <TextInput
+            style={styles.input}
+            placeholder="Player name"
+            placeholderTextColor={theme.muted}
+            value={name}
+            onChangeText={setName}
+            onSubmitEditing={handleAdd}
+            returnKeyType="done"
+          />
+          <PrimaryGoldButton
+            title="Add"
+            onPress={handleAdd}
+            disabled={!name.trim()}
+            size="medium"
+            style={styles.addButton}
+          />
+        </View>
+        {globalPlayers.length === 0 ? (
+          <PremiumEmptyState
+            suit="♠"
+            title="No saved players"
+            subtitle="Add players here to deal them in quickly at your next table."
+          />
+        ) : (
+          <FlatList
+            data={globalPlayers}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            renderItem={({ item }) => (
+              <GlassPanel style={styles.row}>
+                <PlayerAvatar player={item} showName={false} size="small" />
                 {editingId === item.id ? (
-                  <Pressable
-                    onPress={() => handleSaveEdit(item)}
-                    style={styles.iconBtn}
-                  >
-                    <Ionicons name="checkmark" size={20} color={theme.success} />
-                  </Pressable>
+                  <TextInput
+                    style={styles.editInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    autoFocus
+                    onSubmitEditing={() => handleSaveEdit(item)}
+                  />
                 ) : (
-                  <Pressable
-                    onPress={() => {
-                      setEditingId(item.id);
-                      setEditName(item.name);
-                    }}
+                  <Text style={styles.playerName}>{item.name}</Text>
+                )}
+                <View style={styles.actions}>
+                  {editingId === item.id ? (
+                    <AnimatedPressable
+                      onPress={() => handleSaveEdit(item)}
+                      style={styles.iconBtn}
+                    >
+                      <Check size={20} color={theme.success} />
+                    </AnimatedPressable>
+                  ) : (
+                    <AnimatedPressable
+                      onPress={() => {
+                        setEditingId(item.id);
+                        setEditName(item.name);
+                      }}
+                      style={styles.iconBtn}
+                    >
+                      <Pencil size={18} color={theme.gold} />
+                    </AnimatedPressable>
+                  )}
+                  <AnimatedPressable
+                    onPress={() => handleDelete(item)}
                     style={styles.iconBtn}
                   >
-                    <Ionicons name="pencil" size={18} color={theme.emerald} />
-                  </Pressable>
-                )}
-                <Pressable
-                  onPress={() => handleDelete(item)}
-                  style={styles.iconBtn}
-                >
-                  <Ionicons name="trash-outline" size={18} color={theme.danger} />
-                </Pressable>
-              </View>
-            </View>
-          )}
-        />
-      )}
-    </View>
+                    <Trash2 size={18} color={theme.danger} />
+                  </AnimatedPressable>
+                </View>
+              </GlassPanel>
+            )}
+          />
+        )}
+      </SafeAreaView>
+    </FeltBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   addSection: {
     flexDirection: 'row',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
     gap: 12,
     alignItems: 'center',
   },
   input: {
     flex: 1,
-    backgroundColor: theme.white,
-    borderRadius: 12,
+    backgroundColor: 'rgba(247, 244, 236, 0.95)',
+    borderRadius: theme.cardRadius,
     borderWidth: 1,
-    borderColor: theme.border,
+    borderColor: 'rgba(217, 183, 93, 0.35)',
     paddingHorizontal: 16,
     paddingVertical: 14,
+    fontFamily: fonts.sans,
     fontSize: 16,
     color: theme.text,
   },
@@ -168,33 +176,28 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.white,
-    borderRadius: theme.cardRadius,
     padding: 12,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: theme.border,
-    ...theme.shadow,
+    gap: 10,
   },
   playerName: {
     flex: 1,
+    fontFamily: fonts.sansBold,
     fontSize: 16,
-    fontWeight: '600',
     color: theme.text,
-    marginLeft: 4,
   },
   editInput: {
     flex: 1,
+    fontFamily: fonts.sans,
     fontSize: 16,
     color: theme.text,
     borderBottomWidth: 1,
-    borderBottomColor: theme.emerald,
+    borderBottomColor: theme.gold,
     paddingVertical: 4,
-    marginLeft: 4,
   },
   actions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 4,
   },
   iconBtn: {
     padding: 8,

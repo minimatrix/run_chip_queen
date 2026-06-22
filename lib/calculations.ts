@@ -384,3 +384,51 @@ export function getPotColumnTotals(totals: PlayerTotal[]): PotAmounts {
     { run: 0, chip: 0, queen: 0 },
   );
 }
+
+export type SettlementTransfer = {
+  fromId: string;
+  fromName: string;
+  fromColor: string;
+  toId: string;
+  toName: string;
+  toColor: string;
+  amountPence: number;
+};
+
+export function computeSettlementTransfers(
+  totals: PlayerTotal[],
+): SettlementTransfer[] {
+  const debtors = totals
+    .filter((t) => t.net < 0)
+    .map((t) => ({ ...t, remaining: Math.abs(t.net) }))
+    .sort((a, b) => b.remaining - a.remaining);
+  const creditors = totals
+    .filter((t) => t.net > 0)
+    .map((t) => ({ ...t, remaining: t.net }))
+    .sort((a, b) => b.remaining - a.remaining);
+
+  const transfers: SettlementTransfer[] = [];
+  let i = 0;
+  let j = 0;
+
+  while (i < debtors.length && j < creditors.length) {
+    const amount = Math.min(debtors[i].remaining, creditors[j].remaining);
+    if (amount > 0) {
+      transfers.push({
+        fromId: debtors[i].playerId,
+        fromName: debtors[i].name,
+        fromColor: debtors[i].color,
+        toId: creditors[j].playerId,
+        toName: creditors[j].name,
+        toColor: creditors[j].color,
+        amountPence: amount,
+      });
+    }
+    debtors[i].remaining -= amount;
+    creditors[j].remaining -= amount;
+    if (debtors[i].remaining <= 0) i += 1;
+    if (creditors[j].remaining <= 0) j += 1;
+  }
+
+  return transfers;
+}

@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   selectedCircle: {
     borderWidth: 3,
     borderColor: theme.emerald,
-    ...theme.shadowStrong,
+    ...theme.shadowGold,
   },
   initials: {
     color: theme.white,

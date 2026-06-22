@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -9,11 +9,20 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppHeader } from '@/components/AppHeader';
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { TotalsTable } from '@/components/TotalsTable';
-import { theme } from '@/constants/theme';
-import { calculatePlayerTotals } from '@/lib/calculations';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { Trophy } from 'lucide-react-native';
+import { Confetti } from '@/components/ui/Confetti';
+import { FeltBackground } from '@/components/ui/FeltBackground';
+import { LeaderCard } from '@/components/ui/LeaderCard';
+import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
+import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
+import { SettlementCard } from '@/components/ui/SettlementCard';
+import { theme, fonts } from '@/constants/theme';
+import {
+  calculatePlayerTotals,
+  computeSettlementTransfers,
+} from '@/lib/calculations';
 import { buildSettleUpSummary, formatMoney } from '@/lib/format';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -22,16 +31,25 @@ export default function SettleUpScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { activeGame, activeGamePlayers, activeGameRounds, loadGame } =
     useAppStore();
+  const [showConfetti, setShowConfetti] = useState(true);
 
   useEffect(() => {
     if (id) loadGame(id);
   }, [id, loadGame]);
 
+  useEffect(() => {
+    if (activeGame?.id === id) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [activeGame?.id, id]);
+
   if (!activeGame || activeGame.id !== id) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={theme.emerald} />
-      </View>
+      <FeltBackground>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={theme.gold} />
+        </View>
+      </FeltBackground>
     );
   }
 
@@ -40,13 +58,15 @@ export default function SettleUpScreen() {
     activeGameRounds,
     activeGamePlayers,
   );
+  const sorted = [...totals].sort((a, b) => b.total - a.total);
+  const transfers = computeSettlementTransfers(totals);
 
   const handleShare = async () => {
     const summary = [
       `Run, Chip, Queen — ${activeGame.name}`,
       '',
       'Final Totals:',
-      ...totals.map(
+      ...sorted.map(
         (t) =>
           `${t.name}: Run ${formatMoney(t.run)} | Chip ${formatMoney(t.chip)} | Queen ${formatMoney(t.queen)} | Total ${formatMoney(t.total)}`,
       ),
@@ -59,79 +79,66 @@ export default function SettleUpScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <AppHeader
-        title="Game Complete!"
-        subtitle="Settle up"
+    <FeltBackground>
+      <Confetti
+        active={showConfetti}
+        onComplete={() => setShowConfetti(false)}
       />
-      <ScrollView contentContainerStyle={styles.content}>
-        <TotalsTable totals={totals} showNet showRemaining />
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <Animated.View entering={FadeInDown.springify()} style={styles.hero}>
+            <Trophy size={56} color={theme.gold} strokeWidth={1.5} />
+            <Text style={styles.heroSuit}>♠</Text>
+            <Text style={styles.heroTitle}>Game Complete</Text>
+            <Text style={styles.heroSubtitle}>{activeGame.name}</Text>
+          </Animated.View>
 
-        <View style={styles.settleSection}>
-          <Text style={styles.settleTitle}>Funds remaining</Text>
-          {totals.map((t) => (
-            <View key={`remaining-${t.playerId}`} style={styles.settleRow}>
-              <Text style={styles.settleName}>{t.name}</Text>
-              <Text
-                style={[
-                  styles.settleAmount,
-                  t.remaining <= 0 && styles.negative,
-                  t.canPlay && styles.positive,
-                ]}
-              >
-                {t.remaining <= 0
-                  ? 'out of funds'
-                  : formatMoney(t.remaining)}
-              </Text>
-            </View>
+          <Text style={styles.sectionTitle}>Final Standings</Text>
+          {sorted.map((total, index) => (
+            <LeaderCard key={total.playerId} total={total} rank={index} />
           ))}
-        </View>
 
-        <View style={styles.settleSection}>
-          <Text style={styles.settleTitle}>What does everyone owe?</Text>
-          {totals.map((t) => (
-            <View key={`net-${t.playerId}`} style={styles.settleRow}>
-              <Text style={styles.settleName}>{t.name}</Text>
-              <Text
-                style={[
-                  styles.settleAmount,
-                  t.net > 0 && styles.positive,
-                  t.net < 0 && styles.negative,
-                ]}
-              >
-                {t.net > 0
-                  ? `is owed ${formatMoney(t.net)}`
-                  : t.net < 0
-                    ? `owes ${formatMoney(Math.abs(t.net))}`
-                    : 'is even'}
-              </Text>
+          {transfers.length > 0 ? (
+            <View style={styles.settleSection}>
+              <Text style={styles.sectionTitle}>Settlement</Text>
+              {transfers.map((transfer, index) => (
+                <SettlementCard
+                  key={`${transfer.fromId}-${transfer.toId}-${index}`}
+                  fromName={transfer.fromName}
+                  fromColor={transfer.fromColor}
+                  toName={transfer.toName}
+                  toColor={transfer.toColor}
+                  amountPence={transfer.amountPence}
+                />
+              ))}
             </View>
-          ))}
-        </View>
+          ) : null}
 
-        <PrimaryButton title="New Game" onPress={() => router.replace('/game/new')} />
-        <PrimaryButton
-          title="Share Summary"
-          variant="outline"
-          onPress={handleShare}
-          style={styles.btn}
-        />
-        <PrimaryButton
-          title="Back to Games"
-          variant="secondary"
-          onPress={() => router.replace('/(tabs)')}
-          style={styles.btn}
-        />
-        <SafeAreaView edges={['bottom']} />
-      </ScrollView>
-    </View>
+          <PrimaryGoldButton
+            title="Share Summary"
+            onPress={handleShare}
+            style={styles.btn}
+          />
+          <SecondaryGreenButton
+            title="New Game"
+            onPress={() => router.replace('/game/new')}
+            style={styles.btn}
+          />
+          <SecondaryGreenButton
+            title="Back to Games"
+            variant="filled"
+            onPress={() => router.replace('/(tabs)')}
+            style={styles.btn}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    </FeltBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   loading: {
     flex: 1,
@@ -139,48 +146,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    padding: 16,
-    paddingBottom: 32,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  hero: {
+    alignItems: 'center',
+    marginBottom: 28,
+    paddingTop: 12,
+  },
+  heroSuit: {
+    fontSize: 24,
+    color: theme.gold,
+    marginTop: 12,
+  },
+  heroTitle: {
+    fontFamily: fonts.serifBold,
+    fontSize: 32,
+    color: theme.ivory,
+    marginTop: 8,
+  },
+  heroSubtitle: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 15,
+    color: theme.muted,
+    marginTop: 6,
+  },
+  sectionTitle: {
+    fontFamily: fonts.sansBold,
+    fontSize: 12,
+    color: theme.gold,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: 14,
+    marginTop: 8,
   },
   settleSection: {
-    backgroundColor: theme.mint,
-    borderRadius: theme.cardRadius,
-    padding: 16,
-    marginVertical: 20,
-    borderWidth: 1,
-    borderColor: '#C6E8CC',
-  },
-  settleTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.emeraldDark,
-    marginBottom: 12,
-  },
-  settleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#C6E8CC',
-  },
-  settleName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.text,
-  },
-  settleAmount: {
-    fontSize: 14,
-    color: theme.textSecondary,
-    fontWeight: '500',
-  },
-  positive: {
-    color: theme.success,
-    fontWeight: '700',
-  },
-  negative: {
-    color: theme.danger,
-    fontWeight: '700',
+    marginTop: 8,
+    marginBottom: 16,
   },
   btn: {
     marginTop: 12,

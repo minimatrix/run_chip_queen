@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,11 +7,23 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { PotSelector } from '@/components/PotSelector';
-import { PotTotalsPanel } from '@/components/PotTotalsPanel';
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { theme } from '@/constants/theme';
+import { ChevronLeft } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+import { FeltBackground } from '@/components/ui/FeltBackground';
+import { LeaderCard } from '@/components/ui/LeaderCard';
+import { PotCard } from '@/components/ui/PotCard';
+import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
+import { RoundHeroCard } from '@/components/ui/RoundHeroCard';
+import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
+import { TwoHandsBanner } from '@/components/ui/TwoHandsBanner';
+import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
+import { theme, fonts } from '@/constants/theme';
 import {
   calculatePlayerTotals,
   getActivePlayerIdsForRound,
@@ -25,7 +36,6 @@ import {
 import { formatMoney, formatStake } from '@/lib/format';
 import { useAppStore } from '@/store/useAppStore';
 import type { Round } from '@/lib/types';
-import { TwoHandsBanner } from '@/components/TwoHandsBanner';
 
 const emptyForm = {
   runWinnerId: null as string | null,
@@ -42,12 +52,8 @@ export default function RoundScreen() {
     roundNumber?: string;
   }>();
 
-  const {
-    activeGame,
-    activeGamePlayers,
-    activeGameRounds,
-    saveRound,
-  } = useAppStore();
+  const { activeGame, activeGamePlayers, activeGameRounds, saveRound } =
+    useAppStore();
 
   const editingRound = roundId
     ? activeGameRounds.find((round) => round.id === roundId)
@@ -65,6 +71,8 @@ export default function RoundScreen() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const flipRotation = useSharedValue(0);
+
   const loadRoundIntoForm = (round: Round | null) => {
     if (round) {
       setRunWinnerId(round.runWinnerId ?? null);
@@ -73,7 +81,6 @@ export default function RoundScreen() {
       setNotes(round.notes ?? '');
       return;
     }
-
     setRunWinnerId(emptyForm.runWinnerId);
     setChipWinnerId(emptyForm.chipWinnerId);
     setQueenWinnerId(emptyForm.queenWinnerId);
@@ -84,47 +91,81 @@ export default function RoundScreen() {
     loadRoundIntoForm(editingRound ?? null);
   }, [editingRound?.id, roundId]);
 
-  if (!activeGame) return null;
+  const flipStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - Math.abs(flipRotation.value) * 0.04 }],
+    opacity: 1 - Math.abs(flipRotation.value) * 0.15,
+  }));
 
-  const playerRoundCost = getPlayerRoundCostPence(activeGame);
+  const roundState = useMemo(() => {
+    if (!activeGame) return null;
 
-  const priorRounds = getRoundsForDisplay(activeGameRounds, {
-    editingRoundId: editingRound?.id,
-    upToRoundNumber: editingRound ? undefined : nextRoundNumber,
-  });
+    const playerRoundCost = getPlayerRoundCostPence(activeGame);
+    const priorRounds = getRoundsForDisplay(activeGameRounds, {
+      editingRoundId: editingRound?.id,
+      upToRoundNumber: editingRound ? undefined : nextRoundNumber,
+    });
+    const activePlayerIds = getActivePlayerIdsForRound(
+      activeGame,
+      activeGamePlayers,
+      priorRounds,
+    );
+    const basePotValue = getPotValuePence(activeGame, activePlayerIds.length);
+    const currentPotValues = getCurrentPotValues(
+      activeGame,
+      activeGamePlayers,
+      priorRounds,
+    );
+    const currentTotals = calculatePlayerTotals(
+      activeGame,
+      priorRounds,
+      activeGamePlayers,
+    );
+    const twoHandsPlayer = getTwoHandsPlayerForRound(
+      activeGame,
+      activeGamePlayers,
+      priorRounds,
+      nextRoundNumber,
+    );
+    const disabledPlayerIds = new Set(
+      currentTotals.filter((row) => !row.canPlay).map((row) => row.playerId),
+    );
+    const sortedTotals = [...currentTotals].sort((a, b) => b.total - a.total);
+    const hasCarryover =
+      currentPotValues.run > basePotValue ||
+      currentPotValues.chip > basePotValue ||
+      currentPotValues.queen > basePotValue;
 
-  const activePlayerIds = getActivePlayerIdsForRound(
+    return {
+      playerRoundCost,
+      priorRounds,
+      activePlayerIds,
+      basePotValue,
+      currentPotValues,
+      currentTotals,
+      twoHandsPlayer,
+      disabledPlayerIds,
+      sortedTotals,
+      hasCarryover,
+    };
+  }, [
     activeGame,
     activeGamePlayers,
-    priorRounds,
-  );
-  const basePotValue = getPotValuePence(activeGame, activePlayerIds.length);
-  const currentPotValues = getCurrentPotValues(
-    activeGame,
-    activeGamePlayers,
-    priorRounds,
-  );
-
-  const currentTotals = calculatePlayerTotals(
-    activeGame,
-    priorRounds,
-    activeGamePlayers,
-  );
-
-  const twoHandsPlayer = getTwoHandsPlayerForRound(
-    activeGame,
-    activeGamePlayers,
-    priorRounds,
+    activeGameRounds,
+    editingRound?.id,
     nextRoundNumber,
-  );
+  ]);
 
-  const disabledPlayerIds = useMemo(
-    () =>
-      new Set(
-        currentTotals.filter((row) => !row.canPlay).map((row) => row.playerId),
-      ),
-    [currentTotals],
-  );
+  if (!activeGame || !roundState) return null;
+
+  const {
+    playerRoundCost,
+    basePotValue,
+    currentPotValues,
+    twoHandsPlayer,
+    disabledPlayerIds,
+    sortedTotals,
+    hasCarryover,
+  } = roundState;
 
   const navigateToRound = (round: Round | null, roundNumber: number) => {
     router.setParams({
@@ -135,15 +176,19 @@ export default function RoundScreen() {
   };
 
   const handleSave = async () => {
+    flipRotation.value = withSequence(
+      withTiming(1, { duration: 120 }),
+      withTiming(0, { duration: 120 }),
+    );
     setSaving(true);
     try {
       await saveRound({
         id: editingRound?.id,
         gameId: activeGame.id,
         roundNumber: nextRoundNumber,
-        runWinnerId: runWinnerId,
-        chipWinnerId: chipWinnerId,
-        queenWinnerId: queenWinnerId,
+        runWinnerId,
+        chipWinnerId,
+        queenWinnerId,
         notes,
       });
 
@@ -163,182 +208,188 @@ export default function RoundScreen() {
     const previousRound = activeGameRounds.find(
       (round) => round.roundNumber === nextRoundNumber - 1,
     );
-
     if (previousRound) {
       navigateToRound(previousRound, previousRound.roundNumber);
     }
   };
 
-  const canGoPrevious = nextRoundNumber > 1;
-
   return (
-    <View style={styles.container}>
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={theme.white} />
-        </Pressable>
-        <View style={styles.topBarCenter}>
-          <Text style={styles.topTitle}>
-            Round {nextRoundNumber}
-            {editingRound ? ' (editing)' : ''}
-          </Text>
-          <Text style={styles.topSubtitle}>{activeGame.name}</Text>
+    <FeltBackground>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.topBar}>
+          <AnimatedPressable onPress={() => router.back()} style={styles.backBtn}>
+            <ChevronLeft size={26} color={theme.gold} />
+          </AnimatedPressable>
+          <Text style={styles.gameName}>{activeGame.name}</Text>
+          <View style={styles.backBtn} />
         </View>
-        <View style={styles.backBtn} />
-      </View>
 
-      <View style={styles.banner}>
-        <Text style={styles.bannerText}>
-          Base stake: {formatStake(activeGame.stakePerPotPence)} in (
-          {formatStake(basePotValue)} per pot) ·{' '}
-          {formatStake(playerRoundCost)} per player · {activePlayerIds.length}{' '}
-          playing
-        </Text>
-        {(currentPotValues.run > basePotValue ||
-          currentPotValues.chip > basePotValue ||
-          currentPotValues.queen > basePotValue) && (
-          <Text style={styles.bannerSubtext}>
-            Carryover active — pot values below include rolled-over amounts
-          </Text>
-        )}
-        <Text style={styles.bannerSubtext}>
-          Starting balance: {formatMoney(activeGame.startingBalancePence ?? 600)}
-        </Text>
-      </View>
+        <ScrollView contentContainerStyle={styles.content}>
+          <Animated.View style={flipStyle}>
+            <RoundHeroCard
+              roundNumber={nextRoundNumber}
+              stakePence={activeGame.stakePerPotPence}
+              potValuePence={basePotValue}
+              editing={!!editingRound}
+            />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <TwoHandsBanner player={twoHandsPlayer} />
-        <PotTotalsPanel totals={currentTotals} roundCost={playerRoundCost} />
+            {hasCarryover ? (
+              <View style={styles.carryoverBanner}>
+                <Text style={styles.carryoverText}>
+                  ♦ Carryover active — pots include rolled-over amounts
+                </Text>
+              </View>
+            ) : null}
 
-        <PotSelector
-          title="Run Pot"
-          potValuePence={currentPotValues.run}
-          basePotValuePence={basePotValue}
-          players={activeGamePlayers}
-          selectedId={runWinnerId}
-          disabledPlayerIds={disabledPlayerIds}
-          onSelect={setRunWinnerId}
-        />
-        <PotSelector
-          title="Chip Pot"
-          potValuePence={currentPotValues.chip}
-          basePotValuePence={basePotValue}
-          players={activeGamePlayers}
-          selectedId={chipWinnerId}
-          disabledPlayerIds={disabledPlayerIds}
-          onSelect={setChipWinnerId}
-        />
-        <PotSelector
-          title="Queen Pot"
-          potValuePence={currentPotValues.queen}
-          basePotValuePence={basePotValue}
-          players={activeGamePlayers}
-          selectedId={queenWinnerId}
-          disabledPlayerIds={disabledPlayerIds}
-          onSelect={setQueenWinnerId}
-        />
+            <View style={styles.metaRow}>
+              <Text style={styles.metaText}>
+                {formatStake(playerRoundCost)} per player ·{' '}
+                {roundState.activePlayerIds.length} playing ·{' '}
+                {formatMoney(activeGame.startingBalancePence ?? 600)} start
+              </Text>
+            </View>
 
-        <Text style={styles.notesLabel}>Notes (optional)</Text>
-        <TextInput
-          style={styles.notesInput}
-          placeholder="Any notes for this round..."
-          placeholderTextColor={theme.textMuted}
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-        />
+            <TwoHandsBanner player={twoHandsPlayer} />
 
-        <View style={styles.navRow}>
-          {canGoPrevious ? (
-            <PrimaryButton
-              title="Previous Round"
-              variant="outline"
-              onPress={goToPreviousRound}
+            {sortedTotals.slice(0, 3).map((total, index) => (
+              <LeaderCard
+                key={total.playerId}
+                total={total}
+                rank={index}
+                showRemaining
+                compact
+              />
+            ))}
+
+            <PotCard
+              type="run"
+              players={activeGamePlayers}
+              potValuePence={currentPotValues.run}
+              basePotValuePence={basePotValue}
+              selectedId={runWinnerId}
+              disabledPlayerIds={disabledPlayerIds}
+              onSelect={setRunWinnerId}
+              index={0}
+            />
+            <PotCard
+              type="chip"
+              players={activeGamePlayers}
+              potValuePence={currentPotValues.chip}
+              basePotValuePence={basePotValue}
+              selectedId={chipWinnerId}
+              disabledPlayerIds={disabledPlayerIds}
+              onSelect={setChipWinnerId}
+              index={1}
+            />
+            <PotCard
+              type="queen"
+              players={activeGamePlayers}
+              potValuePence={currentPotValues.queen}
+              basePotValuePence={basePotValue}
+              selectedId={queenWinnerId}
+              disabledPlayerIds={disabledPlayerIds}
+              onSelect={setQueenWinnerId}
+              index={2}
+            />
+
+            <Text style={styles.notesLabel}>Notes (optional)</Text>
+            <TextInput
+              style={styles.notesInput}
+              placeholder="Any notes for this round..."
+              placeholderTextColor={theme.muted}
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+            />
+          </Animated.View>
+
+          <View style={styles.navRow}>
+            {nextRoundNumber > 1 ? (
+              <SecondaryGreenButton
+                title="Previous Round"
+                onPress={goToPreviousRound}
+                style={styles.navBtn}
+              />
+            ) : null}
+            <PrimaryGoldButton
+              title={editingRound ? 'Update Round' : 'Save Round'}
+              onPress={handleSave}
+              loading={saving}
               style={styles.navBtn}
             />
-          ) : null}
-          <PrimaryButton
-            title={editingRound ? 'Update Round' : 'Save Round'}
-            onPress={handleSave}
-            loading={saving}
-            style={styles.navBtn}
-          />
-        </View>
-      </ScrollView>
-    </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </FeltBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.emerald,
-    paddingTop: 56,
-    paddingBottom: 16,
     paddingHorizontal: 12,
+    paddingBottom: 8,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  topBarCenter: {
+  gameName: {
     flex: 1,
-    alignItems: 'center',
-  },
-  topTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: theme.white,
-  },
-  topSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
-  },
-  banner: {
-    backgroundColor: theme.mint,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#C6E8CC',
-    gap: 4,
-  },
-  bannerText: {
+    fontFamily: fonts.sansMedium,
     fontSize: 14,
-    fontWeight: '600',
-    color: theme.emeraldDark,
+    color: theme.muted,
     textAlign: 'center',
-  },
-  bannerSubtext: {
-    fontSize: 12,
-    color: theme.emerald,
-    textAlign: 'center',
-    fontWeight: '500',
   },
   content: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
+  },
+  carryoverBanner: {
+    backgroundColor: 'rgba(217, 183, 93, 0.15)',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.gold,
+  },
+  carryoverText: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 12,
+    color: theme.gold,
+    textAlign: 'center',
+  },
+  metaRow: {
+    marginBottom: 12,
+  },
+  metaText: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 12,
+    color: theme.muted,
+    textAlign: 'center',
   },
   notesLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.emerald,
+    fontFamily: fonts.sansBold,
+    fontSize: 12,
+    color: theme.gold,
     marginBottom: 8,
     marginTop: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   notesInput: {
-    backgroundColor: theme.white,
-    borderRadius: 12,
+    backgroundColor: 'rgba(247, 244, 236, 0.95)',
+    borderRadius: theme.cardRadius,
     borderWidth: 1,
-    borderColor: theme.border,
+    borderColor: 'rgba(217, 183, 93, 0.35)',
     padding: 14,
+    fontFamily: fonts.sans,
     fontSize: 15,
     color: theme.text,
     minHeight: 80,
