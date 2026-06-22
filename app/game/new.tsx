@@ -63,6 +63,15 @@ export default function NewGameScreen() {
     setDraftPlayers(draftPlayers.filter((p) => p.id !== id));
   };
 
+  const movePlayer = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= draftPlayers.length) return;
+    const updated = [...draftPlayers];
+    const [item] = updated.splice(index, 1);
+    updated.splice(nextIndex, 0, item);
+    setDraftPlayers(updated);
+  };
+
   const addSavedPlayer = (player: Player) => {
     if (draftPlayers.some((p) => p.name.toLowerCase() === player.name.toLowerCase())) {
       return;
@@ -191,10 +200,47 @@ export default function NewGameScreen() {
         ) : null}
 
         <View style={styles.playerList}>
-          {draftPlayers.map((player) => (
+          <Text style={styles.orderHint}>
+            Two hands order — top player goes first, then rotates each round
+          </Text>
+          {draftPlayers.map((player, index) => (
             <View key={player.id} style={styles.playerRow}>
+              <View style={styles.orderBadge}>
+                <Text style={styles.orderBadgeText}>{index + 1}</Text>
+              </View>
               <PlayerChip player={player} showName={false} size="small" />
               <Text style={styles.playerRowName}>{player.name}</Text>
+              <View style={styles.orderActions}>
+                <Pressable
+                  onPress={() => movePlayer(index, -1)}
+                  disabled={index === 0}
+                  style={[styles.orderBtn, index === 0 && styles.orderBtnDisabled]}
+                >
+                  <Ionicons
+                    name="chevron-up"
+                    size={20}
+                    color={index === 0 ? theme.textMuted : theme.emerald}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => movePlayer(index, 1)}
+                  disabled={index === draftPlayers.length - 1}
+                  style={[
+                    styles.orderBtn,
+                    index === draftPlayers.length - 1 && styles.orderBtnDisabled,
+                  ]}
+                >
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color={
+                      index === draftPlayers.length - 1
+                        ? theme.textMuted
+                        : theme.emerald
+                    }
+                  />
+                </Pressable>
+              </View>
               <Pressable onPress={() => removePlayer(player.id)}>
                 <Ionicons name="close-circle" size={22} color={theme.danger} />
               </Pressable>
@@ -317,6 +363,35 @@ const styles = StyleSheet.create({
   },
   playerList: {
     marginTop: 16,
+  },
+  orderHint: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  orderBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderBadgeText: {
+    color: theme.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  orderActions: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  orderBtn: {
+    padding: 4,
+  },
+  orderBtnDisabled: {
+    opacity: 0.4,
   },
   playerRow: {
     flexDirection: 'row',

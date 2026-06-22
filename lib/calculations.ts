@@ -267,6 +267,45 @@ export function getActivePlayerIdsForRound(
   return simulateGame(game, players, priorRounds).activePlayerIds;
 }
 
+/** Who has two hands this round — rotates through player order, skipping those out of funds. */
+export function getTwoHandsPlayerForRound(
+  game: Game,
+  orderedPlayers: Player[],
+  priorRounds: Round[],
+  roundNumber: number,
+): Player | null {
+  if (orderedPlayers.length === 0 || roundNumber < 1) {
+    return null;
+  }
+
+  const playerRoundCost = getPlayerRoundCostPence(game);
+  const simulation = simulateGame(game, orderedPlayers, priorRounds);
+
+  const activeIds = new Set(
+    orderedPlayers
+      .filter((player) => {
+        const state = simulation.players.get(player.id);
+        return state !== undefined && state.balance >= playerRoundCost;
+      })
+      .map((player) => player.id),
+  );
+
+  if (activeIds.size === 0) {
+    return null;
+  }
+
+  const startIndex = (roundNumber - 1) % orderedPlayers.length;
+
+  for (let offset = 0; offset < orderedPlayers.length; offset++) {
+    const player = orderedPlayers[(startIndex + offset) % orderedPlayers.length];
+    if (activeIds.has(player.id)) {
+      return player;
+    }
+  }
+
+  return null;
+}
+
 export function calculatePlayerTotals(
   game: Game,
   rounds: Round[],

@@ -5,10 +5,11 @@ import { AppHeader } from '@/components/AppHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { theme } from '@/constants/theme';
-import { formatStake } from '@/lib/format';
+import { formatStake, twoHandsLabel } from '@/lib/format';
 import {
   getPotValuesForRound,
   getRoundPayouts,
+  getTwoHandsPlayerForRound,
 } from '@/lib/calculations';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -78,6 +79,15 @@ export default function HistoryScreen() {
               activeGameRounds,
               item,
             );
+            const priorRounds = activeGameRounds.filter(
+              (round) => round.roundNumber < item.roundNumber,
+            );
+            const twoHandsPlayer = getTwoHandsPlayerForRound(
+              activeGame,
+              activeGamePlayers,
+              priorRounds,
+              item.roundNumber,
+            );
 
             return (
               <Pressable
@@ -88,6 +98,11 @@ export default function HistoryScreen() {
                   <Text style={styles.roundNum}>{item.roundNumber}</Text>
                 </View>
                 <View style={styles.details}>
+                  {twoHandsPlayer ? (
+                    <Text style={styles.twoHands}>
+                      {twoHandsLabel(twoHandsPlayer.name)}
+                    </Text>
+                  ) : null}
                   <Text style={styles.potValue}>
                     Run {formatStake(potValues.run)}
                     {item.runWinnerId ? '' : ' · rolled'}
@@ -204,6 +219,12 @@ const styles = StyleSheet.create({
   },
   details: {
     flex: 1,
+  },
+  twoHands: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#92400E',
+    marginBottom: 4,
   },
   potValue: {
     fontSize: 11,

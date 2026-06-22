@@ -83,10 +83,10 @@ export async function insertGame(
     ],
   );
 
-  for (const playerId of playerIds) {
+  for (let index = 0; index < playerIds.length; index++) {
     await db.runAsync(
-      'INSERT INTO game_players (gameId, playerId) VALUES (?, ?)',
-      [game.id, playerId],
+      'INSERT INTO game_players (gameId, playerId, playerOrder) VALUES (?, ?, ?)',
+      [game.id, playerIds[index], index],
     );
   }
 }
@@ -110,7 +110,7 @@ export async function getGamePlayers(
      FROM players p
      INNER JOIN game_players gp ON p.id = gp.playerId
      WHERE gp.gameId = ?
-     ORDER BY p.name COLLATE NOCASE`,
+     ORDER BY gp.playerOrder ASC`,
     [gameId],
   );
 }

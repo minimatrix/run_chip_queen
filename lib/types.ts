@@ -17,6 +17,7 @@ export type Game = {
 export type GamePlayer = {
   gameId: string;
   playerId: string;
+  playerOrder: number;
 };
 
 export type Round = {

@@ -29,6 +29,18 @@ export function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+export function possessiveName(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed.endsWith('s') || trimmed.endsWith('S')) {
+    return `${trimmed}'`;
+  }
+  return `${trimmed}'s`;
+}
+
+export function twoHandsLabel(name: string): string {
+  return `${possessiveName(name)} Two Hands`;
+}
+
 export function buildSettleUpSummary(
   totals: { name: string; net: number }[],
 ): string {

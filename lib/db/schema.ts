@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const CREATE_TABLES = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS games (
 CREATE TABLE IF NOT EXISTS game_players (
   gameId TEXT NOT NULL,
   playerId TEXT NOT NULL,
+  playerOrder INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (gameId, playerId),
   FOREIGN KEY (gameId) REFERENCES games(id) ON DELETE CASCADE,
   FOREIGN KEY (playerId) REFERENCES players(id) ON DELETE CASCADE

@@ -20,10 +20,12 @@ import {
   getPlayerRoundCostPence,
   getPotValuePence,
   getRoundsForDisplay,
+  getTwoHandsPlayerForRound,
 } from '@/lib/calculations';
 import { formatMoney, formatStake } from '@/lib/format';
 import { useAppStore } from '@/store/useAppStore';
 import type { Round } from '@/lib/types';
+import { TwoHandsBanner } from '@/components/TwoHandsBanner';
 
 const emptyForm = {
   runWinnerId: null as string | null,
@@ -107,6 +109,13 @@ export default function RoundScreen() {
     activeGame,
     priorRounds,
     activeGamePlayers,
+  );
+
+  const twoHandsPlayer = getTwoHandsPlayerForRound(
+    activeGame,
+    activeGamePlayers,
+    priorRounds,
+    nextRoundNumber,
   );
 
   const disabledPlayerIds = useMemo(
@@ -198,6 +207,7 @@ export default function RoundScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <TwoHandsBanner player={twoHandsPlayer} />
         <PotTotalsPanel totals={currentTotals} roundCost={playerRoundCost} />
 
         <PotSelector
