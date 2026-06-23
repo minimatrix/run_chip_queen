@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -7,7 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { ChevronDown, ChevronUp, UserPlus, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -29,13 +29,20 @@ export default function NewGameScreen() {
   const router = useRouter();
   const { settings, globalPlayers, createGame } = useAppStore();
   const [gameName, setGameName] = useState('');
-  const [stake, setStake] = useState(20);
+  const [stake, setStake] = useState(settings.stakeIncrement);
   const [startingBalance, setStartingBalance] = useState(
     settings.defaultStartingBalancePence,
   );
   const [playerName, setPlayerName] = useState('');
   const [draftPlayers, setDraftPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setStake(settings.stakeIncrement);
+      setStartingBalance(settings.defaultStartingBalancePence);
+    }, [settings.stakeIncrement, settings.defaultStartingBalancePence]),
+  );
 
   const increment = settings.stakeIncrement;
   const balanceIncrement = settings.startingBalanceIncrement;
