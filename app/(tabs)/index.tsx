@@ -1,75 +1,156 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppHeader } from '@/components/AppHeader';
-import { EmptyState } from '@/components/EmptyState';
-import { GameCard } from '@/components/GameCard';
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { theme } from '@/constants/theme';
+import { CardSuitPattern } from '@/components/ui/CardSuitPattern';
+import { FeltBackground } from '@/components/ui/FeltBackground';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { GameCard } from '@/components/ui/GameCard';
+import { PastGameCard } from '@/components/ui/PastGameCard';
+import { PremiumEmptyState } from '@/components/ui/PremiumEmptyState';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { theme, fonts } from '@/constants/theme';
 import { useAppStore } from '@/store/useAppStore';
+import type { GameWithMeta } from '@/lib/types';
 
 export default function GamesScreen() {
   const router = useRouter();
   const games = useAppStore((s) => s.games);
+  const getGamePreview = useAppStore((s) => s.getGamePreview);
+  const deleteGame = useAppStore((s) => s.deleteGame);
+
+  const activeGame = games.find((g) => g.status === 'active');
+  const pastGames = games.filter((g) => g.id !== activeGame?.id);
+
+  const [activeMeta, setActiveMeta] = useState<{
+    rounds: number;
+    leader?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!activeGame) {
+      setActiveMeta(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const preview = await getGamePreview(activeGame.id);
+      if (!cancelled && preview) {
+        setActiveMeta({
+          rounds: preview.rounds,
+          leader: preview.leader,
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeGame?.id, getGamePreview]);
 
   const handleGamePress = (gameId: string, status: string) => {
     if (status === 'finished') {
       router.push({ pathname: '/settle/[id]', params: { id: gameId } });
     } else {
-      router.push({ pathname: '/game/[id]/round', params: { id: gameId } });
+      router.push({ pathname: '/game/[id]', params: { id: gameId } });
     }
   };
 
+  const handleDeleteGame = (game: GameWithMeta) => {
+    Alert.alert(
+      'Delete Game',
+      `Delete "${game.name}" and all its rounds? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteGame(game.id),
+        },
+      ],
+    );
+  };
+
   return (
-    <View style={styles.container}>
-      <AppHeader
-        title="Run, Chip, Queen"
-        subtitle="Track your games. See who wins."
-      />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {games.length === 0 ? (
-          <EmptyState
-            icon="diamond-outline"
-            title="No games yet"
-            subtitle="Start your first game and track every pot."
-          />
-        ) : (
-          games.map((game) => (
-            <GameCard
-              key={game.id}
-              game={game}
-              onPress={() => handleGamePress(game.id, game.status)}
-            />
-          ))
-        )}
-        <PrimaryButton
-          title="+ New Game"
-          onPress={() => router.push('/game/new')}
-          style={styles.cta}
+    <FeltBackground>
+      <CardSuitPattern opacity={0.04} />
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader
+          title="Welcome back"
+          subtitle="Continue your table."
+          suit="♠"
         />
-        <SafeAreaView edges={['bottom']} />
-      </ScrollView>
-    </View>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {games.length === 0 ? (
+            <PremiumEmptyState
+              suit="♦"
+              title="No games yet"
+              subtitle="Start your first game and track every pot around the table."
+            />
+          ) : (
+            <>
+              {activeGame ? (
+                <GameCard
+                  game={activeGame}
+                  onPress={() => handleGamePress(activeGame.id, activeGame.status)}
+                  isHero
+                  roundsPlayed={activeMeta?.rounds}
+                  leaderName={activeMeta?.leader}
+                />
+              ) : null}
+              {pastGames.length > 0 ? (
+                <View style={styles.pastSection}>
+                  <Text style={styles.pastTitle}>Past Tables</Text>
+                  {pastGames.map((game, index) => (
+                    <PastGameCard
+                      key={game.id}
+                      game={game}
+                      index={index}
+                      onPress={() => handleGamePress(game.id, game.status)}
+                      onDelete={() => handleDeleteGame(game)}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </>
+          )}
+          <View style={styles.bottomPad} />
+        </ScrollView>
+        <FloatingActionButton onPress={() => router.push('/game/new')} />
+      </SafeAreaView>
+    </FeltBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   scroll: {
     flex: 1,
   },
   content: {
-    padding: 20,
-    paddingBottom: 32,
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+    flexGrow: 1,
   },
-  cta: {
+  pastSection: {
     marginTop: 8,
+  },
+  pastTitle: {
+    fontFamily: fonts.sansBold,
+    fontSize: 12,
+    color: theme.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: 16,
+  },
+  bottomPad: {
+    height: 40,
   },
 });

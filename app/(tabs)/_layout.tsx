@@ -1,23 +1,24 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { theme } from '@/constants/theme';
+import { LayoutGrid, Users, BarChart3, Settings } from 'lucide-react-native';
+import { theme, fonts } from '@/constants/theme';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.emerald,
-        tabBarInactiveTintColor: theme.textMuted,
+        tabBarActiveTintColor: theme.gold,
+        tabBarInactiveTintColor: theme.muted,
         tabBarStyle: {
-          backgroundColor: theme.white,
-          borderTopColor: theme.border,
-          paddingTop: 4,
+          backgroundColor: theme.dark,
+          borderTopColor: 'rgba(217, 183, 93, 0.25)',
+          borderTopWidth: 1,
+          paddingTop: 6,
           height: 88,
         },
         tabBarLabelStyle: {
+          fontFamily: fonts.sansMedium,
           fontSize: 11,
-          fontWeight: '600',
           marginBottom: 8,
         },
       }}
@@ -27,7 +28,7 @@ export default function TabLayout() {
         options={{
           title: 'Games',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="albums-outline" size={size} color={color} />
+            <LayoutGrid size={size} color={color} />
           ),
         }}
       />
@@ -35,9 +36,7 @@ export default function TabLayout() {
         name="players"
         options={{
           title: 'Players',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -45,7 +44,7 @@ export default function TabLayout() {
         options={{
           title: 'Stats',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" size={size} color={color} />
+            <BarChart3 size={size} color={color} />
           ),
         }}
       />
@@ -54,7 +53,7 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+            <Settings size={size} color={color} />
           ),
         }}
       />

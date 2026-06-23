@@ -40,6 +40,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
 export async function resetDatabase(): Promise<void> {
   const db = await getDatabase();
   await db.execAsync(`
+    DELETE FROM player_buy_ins;
     DELETE FROM rounds;
     DELETE FROM game_players;
     DELETE FROM games;

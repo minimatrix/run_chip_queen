@@ -1,8 +1,11 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { AppHeader } from '@/components/AppHeader';
-import { EmptyState } from '@/components/EmptyState';
-import { theme } from '@/constants/theme';
-import { formatMoney } from '@/lib/format';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FeltBackground } from '@/components/ui/FeltBackground';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { PremiumEmptyState } from '@/components/ui/PremiumEmptyState';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { theme, fonts } from '@/constants/theme';
+import { formatMoney, formatStake } from '@/lib/format';
 import { useAppStore } from '@/store/useAppStore';
 
 export default function StatsScreen() {
@@ -14,56 +17,63 @@ export default function StatsScreen() {
   const avgStake = games.length > 0 ? Math.round(totalStake / games.length) : 0;
 
   return (
-    <View style={styles.container}>
-      <AppHeader title="Stats" subtitle="Your game history at a glance." />
-      {games.length === 0 ? (
-        <EmptyState
-          icon="stats-chart-outline"
-          title="No stats yet"
-          subtitle="Play some games to see your stats here."
+    <FeltBackground>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader
+          title="Stats"
+          subtitle="Your table history at a glance."
+          suit="♣"
         />
-      ) : (
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.grid}>
-            <StatCard label="Total Games" value={String(games.length)} />
-            <StatCard label="Active" value={String(activeGames)} />
-            <StatCard label="Finished" value={String(finishedGames)} />
-            <StatCard
-              label="Avg Stake"
-              value={avgStake >= 100 ? formatMoney(avgStake) : `${avgStake}p`}
-            />
-          </View>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent Games</Text>
-            {games.slice(0, 5).map((game) => (
-              <View key={game.id} style={styles.gameRow}>
-                <Text style={styles.gameName}>{game.name}</Text>
-                <Text style={styles.gameMeta}>
-                  {game.playerCount} players · {game.stakePerPotPence}p in ·{' '}
-                  {game.status}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      )}
-    </View>
+        {games.length === 0 ? (
+          <PremiumEmptyState
+            suit="♦"
+            title="No stats yet"
+            subtitle="Play some games to see your stats here."
+          />
+        ) : (
+          <ScrollView contentContainerStyle={styles.content}>
+            <View style={styles.grid}>
+              <StatCard label="Total Games" value={String(games.length)} />
+              <StatCard label="Active" value={String(activeGames)} />
+              <StatCard label="Finished" value={String(finishedGames)} />
+              <StatCard
+                label="Avg Stake"
+                value={
+                  avgStake >= 100 ? formatMoney(avgStake) : formatStake(avgStake)
+                }
+              />
+            </View>
+            <GlassPanel style={styles.section}>
+              <Text style={styles.sectionTitle}>♠ Recent Tables</Text>
+              {games.slice(0, 5).map((game) => (
+                <View key={game.id} style={styles.gameRow}>
+                  <Text style={styles.gameName}>{game.name}</Text>
+                  <Text style={styles.gameMeta}>
+                    {game.playerCount} players ·{' '}
+                    {formatStake(game.stakePerPotPence)} in · {game.status}
+                  </Text>
+                </View>
+              ))}
+            </GlassPanel>
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </FeltBackground>
   );
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.statCard}>
+    <GlassPanel style={styles.statCard}>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    </GlassPanel>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   content: {
     padding: 20,
@@ -76,49 +86,41 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '47%',
-    backgroundColor: theme.white,
-    borderRadius: theme.cardRadius,
     padding: 20,
-    borderWidth: 1,
-    borderColor: theme.border,
-    ...theme.shadow,
+    alignItems: 'center',
   },
   statValue: {
+    fontFamily: fonts.serifBold,
     fontSize: 28,
-    fontWeight: '700',
-    color: theme.emerald,
+    color: theme.primary,
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 13,
+    fontFamily: fonts.sansMedium,
+    fontSize: 12,
     color: theme.textSecondary,
-    fontWeight: '500',
   },
   section: {
-    backgroundColor: theme.white,
-    borderRadius: theme.cardRadius,
     padding: 16,
-    borderWidth: 1,
-    borderColor: theme.border,
-    ...theme.shadow,
   },
   sectionTitle: {
+    fontFamily: fonts.serif,
     fontSize: 16,
-    fontWeight: '700',
     color: theme.text,
     marginBottom: 12,
   },
   gameRow: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.border,
+    borderBottomColor: 'rgba(217, 183, 93, 0.2)',
   },
   gameName: {
+    fontFamily: fonts.sansBold,
     fontSize: 15,
-    fontWeight: '600',
     color: theme.text,
   },
   gameMeta: {
+    fontFamily: fonts.sansMedium,
     fontSize: 12,
     color: theme.textSecondary,
     marginTop: 2,

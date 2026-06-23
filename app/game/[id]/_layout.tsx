@@ -1,28 +1,29 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Tabs, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { PlusCircle, List, Trophy, MoreHorizontal } from 'lucide-react-native';
 import { useAppStore } from '@/store/useAppStore';
-import { theme } from '@/constants/theme';
+import { theme, fonts } from '@/constants/theme';
+import { FeltBackground } from '@/components/ui/FeltBackground';
 
 export default function GameLayout() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeGame, loadGame } = useAppStore();
+  const { id: rawId } = useLocalSearchParams<{ id: string }>();
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  const activeGame = useAppStore((s) => s.activeGame);
+  const loadGame = useAppStore((s) => s.loadGame);
 
   useEffect(() => {
-    if (id) {
-      loadGame(id);
-    }
-    return () => {
-      useAppStore.getState().clearActiveGame();
-    };
+    if (!id) return;
+    loadGame(id);
   }, [id, loadGame]);
 
-  if (!activeGame || activeGame.id !== id) {
+  if (!id || !activeGame || activeGame.id !== id) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={theme.emerald} />
-      </View>
+      <FeltBackground>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={theme.gold} />
+        </View>
+      </FeltBackground>
     );
   }
 
@@ -30,26 +31,32 @@ export default function GameLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.emerald,
-        tabBarInactiveTintColor: theme.textMuted,
+        lazy: true,
+        tabBarActiveTintColor: theme.gold,
+        tabBarInactiveTintColor: theme.muted,
         tabBarStyle: {
-          backgroundColor: theme.white,
-          borderTopColor: theme.border,
+          backgroundColor: theme.dark,
+          borderTopColor: 'rgba(217, 183, 93, 0.25)',
+          borderTopWidth: 1,
           height: 88,
         },
         tabBarLabelStyle: {
+          fontFamily: fonts.sansMedium,
           fontSize: 11,
-          fontWeight: '600',
           marginBottom: 8,
         },
       }}
     >
       <Tabs.Screen
+        name="index"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
         name="round"
         options={{
           title: 'Round',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle-outline" size={size} color={color} />
+            <PlusCircle size={size} color={color} />
           ),
         }}
       />
@@ -57,18 +64,14 @@ export default function GameLayout() {
         name="history"
         options={{
           title: 'History',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list-outline" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <List size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="totals"
         options={{
           title: 'Totals',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -76,7 +79,7 @@ export default function GameLayout() {
         options={{
           title: 'More',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="ellipsis-horizontal" size={size} color={color} />
+            <MoreHorizontal size={size} color={color} />
           ),
         }}
       />
@@ -89,6 +92,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.white,
   },
 });

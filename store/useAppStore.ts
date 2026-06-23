@@ -2,29 +2,36 @@ import { create } from 'zustand';
 import { getDatabase, resetDatabase } from '@/lib/db';
 import {
   deletePlayer as dbDeletePlayer,
+  deleteGame as dbDeleteGame,
   deleteRound as dbDeleteRound,
   finishGame as dbFinishGame,
   generateId,
   getAllGames,
   getAllPlayers,
   getGame,
+  getGameBuyIns,
+  getGamePlayerMeta,
   getGamePlayers,
   getGameRounds,
   getRound,
   getSettings,
   insertGame,
   insertPlayer,
+  insertPlayerBuyIn,
   insertRound,
+  setBuyInPromptedAtRound,
   updatePlayer as dbUpdatePlayer,
   updateRound as dbUpdateRound,
   updateSettings as dbUpdateSettings,
 } from '@/lib/db/queries';
+import { calculatePlayerTotals } from '@/lib/calculations';
 import { pickPlayerColor } from '@/lib/colors';
 import type {
   AppSettings,
   Game,
   GameWithMeta,
   Player,
+  PlayerBuyIn,
   Round,
 } from '@/lib/types';
 
@@ -36,12 +43,17 @@ type AppStore = {
   activeGame: Game | null;
   activeGamePlayers: Player[];
   activeGameRounds: Round[];
+  activeGameBuyIns: PlayerBuyIn[];
+  activeGameBuyInPromptedAtRound: Record<string, number | null>;
 
   init: () => Promise<void>;
   refreshGames: () => Promise<void>;
   refreshGlobalPlayers: () => Promise<void>;
   loadGame: (gameId: string) => Promise<void>;
   clearActiveGame: () => void;
+  getGamePreview: (
+    gameId: string,
+  ) => Promise<{ rounds: number; leader?: string } | null>;
   createGame: (
     name: string,
     stakePerPotPence: number,
@@ -49,8 +61,15 @@ type AppStore = {
     startingBalancePence: number,
   ) => Promise<string>;
   finishGame: (gameId: string) => Promise<void>;
+  deleteGame: (gameId: string) => Promise<void>;
   saveRound: (round: Omit<Round, 'id' | 'createdAt'> & { id?: string }) => Promise<void>;
   deleteRound: (roundId: string) => Promise<void>;
+  recordPlayerBuyIn: (
+    playerId: string,
+    roundNumber: number,
+    amountPence: number,
+  ) => Promise<void>;
+  markBuyInPrompted: (playerId: string, roundNumber: number) => Promise<void>;
   addGlobalPlayer: (name: string) => Promise<Player>;
   updateGlobalPlayer: (player: Player) => Promise<void>;
   deleteGlobalPlayer: (playerId: string) => Promise<void>;
@@ -66,6 +85,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   activeGame: null,
   activeGamePlayers: [],
   activeGameRounds: [],
+  activeGameBuyIns: [],
+  activeGameBuyInPromptedAtRound: {},
 
   init: async () => {
     const db = await getDatabase();
@@ -92,15 +113,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const game = await getGame(db, gameId);
     if (!game) return;
 
-    const [players, rounds] = await Promise.all([
+    const [players, rounds, buyIns, playerMeta] = await Promise.all([
       getGamePlayers(db, gameId),
       getGameRounds(db, gameId),
+      getGameBuyIns(db, gameId),
+      getGamePlayerMeta(db, gameId),
     ]);
 
     set({
       activeGame: game,
       activeGamePlayers: players,
       activeGameRounds: rounds,
+      activeGameBuyIns: buyIns,
+      activeGameBuyInPromptedAtRound: Object.fromEntries(
+        playerMeta.map((row) => [row.playerId, row.buyInPromptedAtRound]),
+      ),
     });
   },
 
@@ -109,7 +136,26 @@ export const useAppStore = create<AppStore>((set, get) => ({
       activeGame: null,
       activeGamePlayers: [],
       activeGameRounds: [],
+      activeGameBuyIns: [],
+      activeGameBuyInPromptedAtRound: {},
     });
+  },
+
+  getGamePreview: async (gameId: string) => {
+    const db = await getDatabase();
+    const game = await getGame(db, gameId);
+    if (!game) return null;
+
+    const [players, rounds, buyIns] = await Promise.all([
+      getGamePlayers(db, gameId),
+      getGameRounds(db, gameId),
+      getGameBuyIns(db, gameId),
+    ]);
+
+    const totals = calculatePlayerTotals(game, rounds, players, buyIns);
+    const leader = [...totals].sort((a, b) => b.total - a.total)[0]?.name;
+
+    return { rounds: rounds.length, leader };
   },
 
   createGame: async (name, stakePerPotPence, playerNames, startingBalancePence) => {
@@ -162,6 +208,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
   },
 
+  deleteGame: async (gameId: string) => {
+    const db = await getDatabase();
+    await dbDeleteGame(db, gameId);
+    if (get().activeGame?.id === gameId) {
+      get().clearActiveGame();
+    }
+    await get().refreshGames();
+  },
+
   saveRound: async (roundData) => {
     const db = await getDatabase();
     const { activeGame, activeGameRounds } = get();
@@ -195,6 +250,39 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     const rounds = await getGameRounds(db, activeGame.id);
     set({ activeGameRounds: rounds });
+  },
+
+  recordPlayerBuyIn: async (playerId, roundNumber, amountPence) => {
+    const db = await getDatabase();
+    const { activeGame } = get();
+    if (!activeGame || amountPence <= 0) return;
+
+    const buyIn: PlayerBuyIn = {
+      id: generateId(),
+      gameId: activeGame.id,
+      playerId,
+      roundNumber,
+      amountPence,
+      createdAt: new Date().toISOString(),
+    };
+
+    await insertPlayerBuyIn(db, buyIn);
+    await setBuyInPromptedAtRound(db, activeGame.id, playerId, roundNumber);
+    await get().loadGame(activeGame.id);
+  },
+
+  markBuyInPrompted: async (playerId, roundNumber) => {
+    const db = await getDatabase();
+    const { activeGame } = get();
+    if (!activeGame) return;
+
+    await setBuyInPromptedAtRound(db, activeGame.id, playerId, roundNumber);
+    set({
+      activeGameBuyInPromptedAtRound: {
+        ...get().activeGameBuyInPromptedAtRound,
+        [playerId]: roundNumber,
+      },
+    });
   },
 
   deleteRound: async (roundId: string) => {
@@ -255,6 +343,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       activeGame: null,
       activeGamePlayers: [],
       activeGameRounds: [],
+      activeGameBuyIns: [],
+      activeGameBuyInPromptedAtRound: {},
     });
   },
 }));
