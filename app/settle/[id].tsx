@@ -14,7 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { Trophy } from 'lucide-react-native';
 import { Confetti } from '@/components/ui/Confetti';
 import { FeltBackground } from '@/components/ui/FeltBackground';
-import { LeaderboardPanel } from '@/components/ui/LeaderboardPanel';
+import { FinalStandingsPanel } from '@/components/ui/FinalStandingsPanel';
 import { GameRoundHistoryList } from '@/components/ui/GameRoundHistoryList';
 import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
 import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
@@ -26,8 +26,13 @@ import { useAppStore } from '@/store/useAppStore';
 export default function SettleUpScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeGame, activeGamePlayers, activeGameRounds, loadGame } =
-    useAppStore();
+  const {
+    activeGame,
+    activeGamePlayers,
+    activeGameRounds,
+    activeGameBuyIns,
+    loadGame,
+  } = useAppStore();
   const [showConfetti, setShowConfetti] = useState(true);
 
   useEffect(() => {
@@ -54,6 +59,8 @@ export default function SettleUpScreen() {
     activeGame,
     activeGameRounds,
     activeGamePlayers,
+    activeGameBuyIns,
+    { includeGameStartingFunds: true },
   );
 
   const handleShare = async () => {
@@ -62,10 +69,13 @@ export default function SettleUpScreen() {
       `Run, Chip, Queen — ${activeGame.name}`,
       '',
       'Final Standings:',
-      ...sorted.map(
-        (t) =>
-          `${t.name}: Run ${formatMoney(t.run)} | Chip ${formatMoney(t.chip)} | Queen ${formatMoney(t.queen)} | Finished ${formatMoney(t.remaining)}`,
-      ),
+      ...sorted.map((t) => {
+        const topUp =
+          (t.buyInTotal ?? 0) > 0
+            ? ` | Top-up ${formatMoney(t.buyInTotal ?? 0)}`
+            : '';
+        return `${t.name}: Run ${formatMoney(t.run)} | Chip ${formatMoney(t.chip)} | Queen ${formatMoney(t.queen)}${topUp} | Finished ${formatMoney(t.remaining)}`;
+      }),
       '',
       'Settle Up:',
       buildSettleUpSummary(totals),
@@ -90,17 +100,14 @@ export default function SettleUpScreen() {
           </Animated.View>
 
           <Text style={styles.sectionTitle}>Final Standings</Text>
-          <LeaderboardPanel
-            totals={totals}
-            showRemaining
-            balanceLabel="Finished"
-          />
+          <FinalStandingsPanel totals={totals} />
 
           <Text style={styles.sectionTitle}>Round History</Text>
           <GameRoundHistoryList
             game={activeGame}
             players={activeGamePlayers}
             rounds={activeGameRounds}
+            buyIns={activeGameBuyIns}
             allowDelete={false}
             embedded
           />

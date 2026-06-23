@@ -5,12 +5,13 @@ import {
   getPotValuesForRound,
   getTwoHandsPlayerForRound,
 } from '@/lib/calculations';
-import type { Game, Player, Round } from '@/lib/types';
+import type { Game, Player, PlayerBuyIn, Round } from '@/lib/types';
 
 type GameRoundHistoryListProps = {
   game: Game;
   players: Player[];
   rounds: Round[];
+  buyIns?: PlayerBuyIn[];
   onEditRound?: (roundId: string, roundNumber: number) => void;
   allowDelete?: boolean;
   onDeleteRound?: (roundId: string) => void;
@@ -22,6 +23,7 @@ export function GameRoundHistoryList({
   game,
   players,
   rounds,
+  buyIns = [],
   onEditRound,
   allowDelete = true,
   onDeleteRound,
@@ -57,6 +59,7 @@ export function GameRoundHistoryList({
       players,
       rounds,
       item.roundNumber,
+      buyIns,
     );
     const priorRounds = rounds.filter(
       (round) => round.roundNumber < item.roundNumber,
@@ -66,12 +69,21 @@ export function GameRoundHistoryList({
       players,
       priorRounds,
       item.roundNumber,
+      buyIns,
     );
+    const roundBuyIns = buyIns
+      .filter((buyIn) => buyIn.roundNumber === item.roundNumber)
+      .map((buyIn) => ({
+        id: buyIn.id,
+        playerName: getPlayerName(buyIn.playerId),
+        amountPence: buyIn.amountPence,
+      }));
 
     return (
       <HistoryRoundCard
         roundNumber={item.roundNumber}
         twoHandsName={twoHandsPlayer?.name}
+        buyIns={roundBuyIns}
         runWinner={getPlayerName(item.runWinnerId)}
         chipWinner={getPlayerName(item.chipWinnerId)}
         queenWinner={getPlayerName(item.queenWinnerId)}

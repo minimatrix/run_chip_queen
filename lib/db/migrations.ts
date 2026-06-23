@@ -59,5 +59,28 @@ export async function runMigrations(
     await backfillPlayerOrder(db);
   }
 
+  if (fromVersion < 4) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS player_buy_ins (
+        id TEXT PRIMARY KEY NOT NULL,
+        gameId TEXT NOT NULL,
+        playerId TEXT NOT NULL,
+        roundNumber INTEGER NOT NULL,
+        amountPence INTEGER NOT NULL,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (gameId) REFERENCES games(id) ON DELETE CASCADE,
+        FOREIGN KEY (playerId) REFERENCES players(id) ON DELETE CASCADE
+      );
+    `);
+
+    try {
+      await db.execAsync(`
+        ALTER TABLE game_players ADD COLUMN buyInPromptedAtRound INTEGER;
+      `);
+    } catch {
+      // Column may already exist from a partial migration.
+    }
+  }
+
   await db.runAsync('UPDATE schema_migrations SET version = ?', [SCHEMA_VERSION]);
 }

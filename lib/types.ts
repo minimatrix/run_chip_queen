@@ -31,6 +31,20 @@ export type Round = {
   createdAt: string;
 };
 
+export type PlayerBuyIn = {
+  id: string;
+  gameId: string;
+  playerId: string;
+  roundNumber: number;
+  amountPence: number;
+  createdAt: string;
+};
+
+export type GamePlayerMeta = {
+  playerId: string;
+  buyInPromptedAtRound: number | null;
+};
+
 export type PlayerTotal = {
   playerId: string;
   name: string;
@@ -46,6 +60,10 @@ export type PlayerTotal = {
   canPlay: boolean;
   /** Bought into the round being entered (round screen only). */
   inCurrentRound?: boolean;
+  /** Amount the player started the game with. */
+  startingFunds?: number;
+  /** Total extra funds added via mid-game buy-ins. */
+  buyInTotal?: number;
 };
 
 export type GameWithMeta = Game & {

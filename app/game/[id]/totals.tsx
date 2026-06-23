@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BuyInModal } from '@/components/ui/BuyInModal';
 import { FeltBackground } from '@/components/ui/FeltBackground';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { LeaderboardPanel } from '@/components/ui/LeaderboardPanel';
@@ -12,33 +14,72 @@ import { theme, fonts } from '@/constants/theme';
 import {
   calculatePlayerTotals,
   getAverageRoundValuePence,
+  getPlayerBalanceBeforeRound,
+  getPlayerRoundCostPence,
   getTotalGameValuePence,
 } from '@/lib/calculations';
 import { useAppStore } from '@/store/useAppStore';
+import type { Player, PlayerTotal } from '@/lib/types';
 
 export default function TotalsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeGame, activeGamePlayers, activeGameRounds } = useAppStore();
+  const {
+    activeGame,
+    activeGamePlayers,
+    activeGameRounds,
+    activeGameBuyIns,
+    settings,
+    recordPlayerBuyIn,
+  } = useAppStore();
+
+  const [buyInPlayer, setBuyInPlayer] = useState<Player | null>(null);
 
   if (!activeGame) return null;
+
+  const nextRoundNumber = activeGameRounds.length + 1;
+  const canBuyIn = activeGame.status === 'active';
+
+  const buyInBalancePence = buyInPlayer
+    ? getPlayerBalanceBeforeRound(
+        activeGame,
+        activeGameRounds,
+        activeGamePlayers,
+        buyInPlayer.id,
+        activeGameBuyIns,
+        nextRoundNumber,
+      )
+    : 0;
 
   const totals = calculatePlayerTotals(
     activeGame,
     activeGameRounds,
     activeGamePlayers,
+    activeGameBuyIns,
+    {
+      includeGameStartingFunds: true,
+      applyBuyInsBeforeRound: nextRoundNumber,
+    },
   );
-  const sorted = [...totals].sort((a, b) => b.total - a.total);
+  const sorted = [...totals].sort((a, b) => b.remaining - a.remaining);
   const roundTotal = getAverageRoundValuePence(
     activeGame,
     activeGameRounds,
     activeGamePlayers,
+    activeGameBuyIns,
   );
   const gameValue = getTotalGameValuePence(
     activeGame,
     activeGameRounds,
     activeGamePlayers,
+    activeGameBuyIns,
   );
+
+  const handlePlayerPress = (row: PlayerTotal) => {
+    if (!canBuyIn) return;
+    const player = activeGamePlayers.find((p) => p.id === row.playerId);
+    if (player) setBuyInPlayer(player);
+  };
 
   return (
     <FeltBackground>
@@ -68,7 +109,18 @@ export default function TotalsScreen() {
             </View>
           </GlassPanel>
 
-          <LeaderboardPanel totals={sorted} showRemaining />
+          {canBuyIn ? (
+            <Text style={styles.hint}>Tap a player to add funds</Text>
+          ) : null}
+
+          <LeaderboardPanel
+            totals={sorted}
+            showRemaining
+            compact
+            showStartingFunds
+            showBuyInTotal
+            onPlayerPress={canBuyIn ? handlePlayerPress : undefined}
+          />
 
           <PrimaryGoldButton
             title="Add Next Round"
@@ -77,7 +129,7 @@ export default function TotalsScreen() {
                 pathname: '/game/[id]/round',
                 params: {
                   id,
-                  roundNumber: String(activeGameRounds.length + 1),
+                  roundNumber: String(nextRoundNumber),
                 },
               })
             }
@@ -92,6 +144,22 @@ export default function TotalsScreen() {
           />
         </ScrollView>
       </SafeAreaView>
+
+      <BuyInModal
+        variant="manual"
+        visible={buyInPlayer !== null}
+        player={buyInPlayer}
+        roundNumber={nextRoundNumber}
+        currentBalancePence={buyInBalancePence}
+        roundCostPence={getPlayerRoundCostPence(activeGame)}
+        incrementPence={settings.startingBalanceIncrement}
+        onConfirm={async (amountPence) => {
+          if (!buyInPlayer) return;
+          await recordPlayerBuyIn(buyInPlayer.id, nextRoundNumber, amountPence);
+          setBuyInPlayer(null);
+        }}
+        onStayOut={() => setBuyInPlayer(null)}
+      />
     </FeltBackground>
   );
 }
@@ -148,6 +216,13 @@ const styles = StyleSheet.create({
     width: 1,
     height: 36,
     backgroundColor: 'rgba(217, 183, 93, 0.3)',
+  },
+  hint: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 12,
+    color: theme.muted,
+    textAlign: 'center',
+    marginBottom: 10,
   },
   btn: {
     marginTop: 12,

@@ -1,11 +1,17 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 import { theme, fonts } from '@/constants/theme';
-import { twoHandsLabel } from '@/lib/format';
+import { formatMoney, twoHandsLabel } from '@/lib/format';
 import { GlassPanel } from './GlassPanel';
 import { WinnerBadge } from './WinnerBadge';
 import { AnimatedPressable } from './AnimatedPressable';
 import { SwipeToDelete } from './SwipeToDelete';
+
+type RoundBuyIn = {
+  id: string;
+  playerName: string;
+  amountPence: number;
+};
 
 type HistoryRoundCardProps = {
   roundNumber: number;
@@ -16,6 +22,7 @@ type HistoryRoundCardProps = {
   runPayout?: number;
   chipPayout?: number;
   queenPayout?: number;
+  buyIns?: RoundBuyIn[];
   onPress?: () => void;
   onDelete?: () => void;
   index?: number;
@@ -31,6 +38,7 @@ export function HistoryRoundCard({
   runPayout,
   chipPayout,
   queenPayout,
+  buyIns = [],
   onPress,
   onDelete,
   index = 0,
@@ -44,6 +52,21 @@ export function HistoryRoundCard({
       </View>
       {twoHandsName ? (
         <Text style={styles.twoHands}>{twoHandsLabel(twoHandsName)}</Text>
+      ) : null}
+      {buyIns.length > 0 ? (
+        <View style={styles.buyIns}>
+          {buyIns.map((buyIn) => (
+            <View key={buyIn.id} style={styles.buyInRow}>
+              <Text style={styles.buyInIcon}>💰</Text>
+              <Text style={styles.buyInLabel}>Top-up</Text>
+              <Text style={styles.buyInArrow}>→</Text>
+              <Text style={styles.buyInName}>{buyIn.playerName}</Text>
+              <Text style={styles.buyInAmount}>
+                ({formatMoney(buyIn.amountPence)})
+              </Text>
+            </View>
+          ))}
+        </View>
       ) : null}
       <View style={styles.winners}>
         <WinnerBadge pot="Run" name={runWinner} payout={runPayout} />
@@ -106,6 +129,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.goldDark,
     marginBottom: 8,
+  },
+  buyIns: {
+    gap: 6,
+    marginBottom: 10,
+  },
+  buyInRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  buyInIcon: {
+    fontSize: 12,
+  },
+  buyInLabel: {
+    fontFamily: fonts.sansBold,
+    fontSize: 12,
+    color: theme.goldDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  buyInArrow: {
+    color: theme.muted,
+    fontSize: 12,
+  },
+  buyInName: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 13,
+    color: theme.text,
+  },
+  buyInAmount: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 11,
+    color: theme.textSecondary,
   },
   winners: {
     gap: 6,

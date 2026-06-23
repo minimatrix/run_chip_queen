@@ -1,4 +1,4 @@
-import type { Game, Player, PlayerTotal, Round } from './types';
+import type { Game, Player, PlayerBuyIn, PlayerTotal, Round } from './types';
 
 export type PotAmounts = {
   run: number;
@@ -27,6 +27,40 @@ export type RoundSnapshot = {
   potValues: PotAmounts;
   payouts: PotAmounts;
 };
+
+type SimulationOptions = {
+  includeNextRoundStakes?: boolean;
+  buyIns?: PlayerBuyIn[];
+  /** Apply buy-ins for this round before checking who can play next. */
+  pendingRoundNumber?: number;
+};
+
+function getNextRoundNumber(priorRounds: Round[]): number {
+  if (priorRounds.length === 0) return 1;
+  return Math.max(...priorRounds.map((round) => round.roundNumber)) + 1;
+}
+
+function applyBuyInsForRound(
+  buyIns: PlayerBuyIn[],
+  roundNumber: number,
+  playerStates: Map<string, PlayerSimState>,
+): void {
+  for (const buyIn of buyIns) {
+    if (buyIn.roundNumber !== roundNumber) continue;
+    const state = playerStates.get(buyIn.playerId);
+    if (!state) continue;
+    state.balance += buyIn.amountPence;
+  }
+}
+
+function getBuyInTotalForPlayer(
+  buyIns: PlayerBuyIn[],
+  playerId: string,
+): number {
+  return buyIns
+    .filter((buyIn) => buyIn.playerId === playerId)
+    .reduce((sum, buyIn) => sum + buyIn.amountPence, 0);
+}
 
 type SimulationResult = {
   players: Map<string, PlayerSimState>;
@@ -121,10 +155,11 @@ function simulateGame(
   game: Game,
   players: Player[],
   rounds: Round[],
-  options: { includeNextRoundStakes?: boolean } = {},
+  options: SimulationOptions = {},
 ): SimulationResult {
   const playerRoundCost = getPlayerRoundCostPence(game);
   const startingBalance = game.startingBalancePence ?? 600;
+  const buyIns = options.buyIns ?? [];
   const potState: PotState = { run: 0, chip: 0, queen: 0 };
 
   const playerStates = new Map<string, PlayerSimState>(
@@ -143,6 +178,7 @@ function simulateGame(
   const roundSnapshots: RoundSnapshot[] = [];
 
   for (const round of sortRounds(rounds)) {
+    applyBuyInsForRound(buyIns, round.roundNumber, playerStates);
     const activePlayerIds = getActivePlayerIds(
       players,
       playerStates,
@@ -160,6 +196,10 @@ function simulateGame(
       potValues,
       payouts,
     });
+  }
+
+  if (options.pendingRoundNumber !== undefined) {
+    applyBuyInsForRound(buyIns, options.pendingRoundNumber, playerStates);
   }
 
   const activePlayerIds = getActivePlayerIds(
@@ -222,9 +262,12 @@ export function getCurrentPotValues(
   game: Game,
   players: Player[],
   priorRounds: Round[],
+  buyIns: PlayerBuyIn[] = [],
 ): PotAmounts {
   return simulateGame(game, players, priorRounds, {
     includeNextRoundStakes: true,
+    buyIns,
+    pendingRoundNumber: getNextRoundNumber(priorRounds),
   }).currentPotValues;
 }
 
@@ -233,12 +276,15 @@ export function getPotValuesForRound(
   players: Player[],
   allRounds: Round[],
   roundNumber: number,
+  buyIns: PlayerBuyIn[] = [],
 ): PotAmounts {
   const priorRounds = allRounds.filter(
     (round) => round.roundNumber < roundNumber,
   );
   const simulation = simulateGame(game, players, priorRounds, {
     includeNextRoundStakes: true,
+    buyIns,
+    pendingRoundNumber: roundNumber,
   });
   return simulation.currentPotValues;
 }
@@ -248,11 +294,14 @@ export function getRoundPayouts(
   players: Player[],
   allRounds: Round[],
   round: Round,
+  buyIns: PlayerBuyIn[] = [],
 ): PotAmounts {
   const priorRounds = allRounds.filter(
     (item) => item.roundNumber < round.roundNumber,
   );
-  const simulation = simulateGame(game, players, [...priorRounds, round]);
+  const simulation = simulateGame(game, players, [...priorRounds, round], {
+    buyIns,
+  });
   const snapshot = simulation.rounds.find(
     (item) => item.roundNumber === round.roundNumber,
   );
@@ -263,8 +312,12 @@ export function getActivePlayerIdsForRound(
   game: Game,
   players: Player[],
   priorRounds: Round[],
+  buyIns: PlayerBuyIn[] = [],
 ): string[] {
-  return simulateGame(game, players, priorRounds).activePlayerIds;
+  return simulateGame(game, players, priorRounds, {
+    buyIns,
+    pendingRoundNumber: getNextRoundNumber(priorRounds),
+  }).activePlayerIds;
 }
 
 /** Who has two hands this round — rotates through player order, skipping those out of funds. */
@@ -273,13 +326,17 @@ export function getTwoHandsPlayerForRound(
   orderedPlayers: Player[],
   priorRounds: Round[],
   roundNumber: number,
+  buyIns: PlayerBuyIn[] = [],
 ): Player | null {
   if (orderedPlayers.length === 0 || roundNumber < 1) {
     return null;
   }
 
   const playerRoundCost = getPlayerRoundCostPence(game);
-  const simulation = simulateGame(game, orderedPlayers, priorRounds);
+  const simulation = simulateGame(game, orderedPlayers, priorRounds, {
+    buyIns,
+    pendingRoundNumber: roundNumber,
+  });
 
   const activeIds = new Set(
     orderedPlayers
@@ -310,10 +367,15 @@ function buildPlayerTotals(
   game: Game,
   players: Player[],
   playerStates: Map<string, PlayerSimState>,
-  options: { inCurrentRound?: Set<string> } = {},
+  options: {
+    inCurrentRound?: Set<string>;
+    includeGameStartingFunds?: boolean;
+    buyIns?: PlayerBuyIn[];
+  } = {},
 ): PlayerTotal[] {
   const playerRoundCost = getPlayerRoundCostPence(game);
-  const { inCurrentRound } = options;
+  const { inCurrentRound, includeGameStartingFunds, buyIns = [] } = options;
+  const gameStartingFunds = game.startingBalancePence ?? 600;
 
   return players
     .map((player) => {
@@ -340,6 +402,12 @@ function buildPlayerTotals(
         ...(inCurrentRound !== undefined
           ? { inCurrentRound: inCurrentRound.has(player.id) }
           : {}),
+        ...(includeGameStartingFunds
+          ? { startingFunds: gameStartingFunds }
+          : {}),
+        ...(buyIns.length > 0 || includeGameStartingFunds
+          ? { buyInTotal: getBuyInTotalForPlayer(buyIns, player.id) }
+          : {}),
       };
     })
     .sort((a, b) => b.remaining - a.remaining);
@@ -349,9 +417,20 @@ export function calculatePlayerTotals(
   game: Game,
   rounds: Round[],
   players: Player[],
+  buyIns: PlayerBuyIn[] = [],
+  options: {
+    includeGameStartingFunds?: boolean;
+    applyBuyInsBeforeRound?: number;
+  } = {},
 ): PlayerTotal[] {
-  const simulation = simulateGame(game, players, rounds);
-  return buildPlayerTotals(game, players, simulation.players);
+  const simulation = simulateGame(game, players, rounds, {
+    buyIns,
+    pendingRoundNumber: options.applyBuyInsBeforeRound,
+  });
+  return buildPlayerTotals(game, players, simulation.players, {
+    buyIns,
+    includeGameStartingFunds: options.includeGameStartingFunds,
+  });
 }
 
 /** Totals for the round entry screen — includes buy-in for the round being played. */
@@ -359,10 +438,17 @@ export function calculatePlayerTotalsForRoundEntry(
   game: Game,
   priorRounds: Round[],
   players: Player[],
+  roundNumber: number,
+  buyIns: PlayerBuyIn[] = [],
 ): PlayerTotal[] {
   const playerRoundCost = getPlayerRoundCostPence(game);
-  const simulation = simulateGame(game, players, priorRounds);
-  const inCurrentRound = new Set(simulation.activePlayerIds);
+  const simulation = simulateGame(game, players, priorRounds, {
+    buyIns,
+    pendingRoundNumber: roundNumber,
+  });
+  const inCurrentRound = new Set(
+    getActivePlayerIds(players, simulation.players, playerRoundCost),
+  );
 
   for (const playerId of inCurrentRound) {
     const state = simulation.players.get(playerId);
@@ -373,6 +459,53 @@ export function calculatePlayerTotalsForRoundEntry(
 
   return buildPlayerTotals(game, players, simulation.players, {
     inCurrentRound,
+    includeGameStartingFunds: true,
+    buyIns,
+  });
+}
+
+export function getPlayerBalanceBeforeRound(
+  game: Game,
+  priorRounds: Round[],
+  players: Player[],
+  playerId: string,
+  buyIns: PlayerBuyIn[] = [],
+  pendingRoundNumber?: number,
+): number {
+  const simulation = simulateGame(game, players, priorRounds, {
+    buyIns,
+    pendingRoundNumber,
+  });
+  return (
+    simulation.players.get(playerId)?.balance ??
+    game.startingBalancePence ??
+    600
+  );
+}
+
+/** Players who need a buy-in prompt at the start of this round. */
+export function getPlayersNeedingBuyInPrompt(
+  game: Game,
+  priorRounds: Round[],
+  players: Player[],
+  buyIns: PlayerBuyIn[],
+  currentRoundNumber: number,
+  buyInPromptedAtRound: Record<string, number | null>,
+): Player[] {
+  const playerRoundCost = getPlayerRoundCostPence(game);
+  const simulation = simulateGame(game, players, priorRounds, {
+    buyIns,
+    pendingRoundNumber: currentRoundNumber,
+  });
+
+  return players.filter((player) => {
+    const state = simulation.players.get(player.id);
+    const isOut = state === undefined || state.balance < playerRoundCost;
+    if (!isOut) return false;
+
+    const prompted = buyInPromptedAtRound[player.id] ?? null;
+    if (prompted === null) return true;
+    return false;
   });
 }
 
@@ -380,8 +513,9 @@ export function getTotalGameValuePence(
   game: Game,
   rounds: Round[],
   players: Player[],
+  buyIns: PlayerBuyIn[] = [],
 ): number {
-  const simulation = simulateGame(game, players, rounds);
+  const simulation = simulateGame(game, players, rounds, { buyIns });
   let total = 0;
   for (const state of simulation.players.values()) {
     total += state.contributed;
@@ -393,15 +527,18 @@ export function getAverageRoundValuePence(
   game: Game,
   rounds: Round[],
   players: Player[],
+  buyIns: PlayerBuyIn[] = [],
 ): number {
   if (rounds.length === 0) {
     const simulation = simulateGame(game, players, [], {
       includeNextRoundStakes: true,
+      buyIns,
+      pendingRoundNumber: 1,
     });
     return getRoundTotalPence(game, simulation.activePlayerIds.length);
   }
 
-  const simulation = simulateGame(game, players, rounds);
+  const simulation = simulateGame(game, players, rounds, { buyIns });
   const roundTotal = simulation.rounds.reduce(
     (sum, snapshot) => sum + snapshot.basePotValue * 3,
     0,

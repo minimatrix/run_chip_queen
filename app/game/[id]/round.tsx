@@ -16,6 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { FeltBackground } from '@/components/ui/FeltBackground';
+import { BuyInModal } from '@/components/ui/BuyInModal';
 import { LeaderboardPanel } from '@/components/ui/LeaderboardPanel';
 import { PotCard } from '@/components/ui/PotCard';
 import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
@@ -28,14 +29,16 @@ import {
   calculatePlayerTotalsForRoundEntry,
   getActivePlayerIdsForRound,
   getCurrentPotValues,
+  getPlayerBalanceBeforeRound,
   getPlayerRoundCostPence,
+  getPlayersNeedingBuyInPrompt,
   getPotValuePence,
   getRoundsForDisplay,
   getTwoHandsPlayerForRound,
 } from '@/lib/calculations';
 import { formatMoney, formatStake } from '@/lib/format';
 import { useAppStore } from '@/store/useAppStore';
-import type { Round } from '@/lib/types';
+import type { Player, Round } from '@/lib/types';
 
 const emptyForm = {
   runWinnerId: null as string | null,
@@ -52,8 +55,17 @@ export default function RoundScreen() {
     roundNumber?: string;
   }>();
 
-  const { activeGame, activeGamePlayers, activeGameRounds, saveRound } =
-    useAppStore();
+  const {
+    activeGame,
+    activeGamePlayers,
+    activeGameRounds,
+    activeGameBuyIns,
+    activeGameBuyInPromptedAtRound,
+    settings,
+    saveRound,
+    recordPlayerBuyIn,
+    markBuyInPrompted,
+  } = useAppStore();
 
   const editingRound = roundId
     ? activeGameRounds.find((round) => round.id === roundId)
@@ -70,6 +82,8 @@ export default function RoundScreen() {
   const [queenWinnerId, setQueenWinnerId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [buyInPlayer, setBuyInPlayer] = useState<Player | null>(null);
+  const [buyInBalancePence, setBuyInBalancePence] = useState(0);
 
   const flipRotation = useSharedValue(0);
 
@@ -108,23 +122,28 @@ export default function RoundScreen() {
       activeGame,
       activeGamePlayers,
       priorRounds,
+      activeGameBuyIns,
     );
     const basePotValue = getPotValuePence(activeGame, activePlayerIds.length);
     const currentPotValues = getCurrentPotValues(
       activeGame,
       activeGamePlayers,
       priorRounds,
+      activeGameBuyIns,
     );
     const currentTotals = calculatePlayerTotalsForRoundEntry(
       activeGame,
       priorRounds,
       activeGamePlayers,
+      nextRoundNumber,
+      activeGameBuyIns,
     );
     const twoHandsPlayer = getTwoHandsPlayerForRound(
       activeGame,
       activeGamePlayers,
       priorRounds,
       nextRoundNumber,
+      activeGameBuyIns,
     );
     const disabledPlayerIds = new Set(
       currentTotals
@@ -153,7 +172,49 @@ export default function RoundScreen() {
     activeGame,
     activeGamePlayers,
     activeGameRounds,
+    activeGameBuyIns,
     editingRound?.id,
+    nextRoundNumber,
+  ]);
+
+  useEffect(() => {
+    if (!activeGame || editingRound || buyInPlayer) return;
+
+    const priorRounds = getRoundsForDisplay(activeGameRounds, {
+      upToRoundNumber: nextRoundNumber,
+    });
+    const playersNeedingBuyIn = getPlayersNeedingBuyInPrompt(
+      activeGame,
+      priorRounds,
+      activeGamePlayers,
+      activeGameBuyIns,
+      nextRoundNumber,
+      activeGameBuyInPromptedAtRound,
+    );
+
+    if (playersNeedingBuyIn.length === 0) return;
+
+    const player = playersNeedingBuyIn[0];
+    const balance = getPlayerBalanceBeforeRound(
+      activeGame,
+      priorRounds,
+      activeGamePlayers,
+      player.id,
+      activeGameBuyIns,
+    );
+
+    setBuyInBalancePence(balance);
+    setBuyInPlayer(player);
+    void markBuyInPrompted(player.id, nextRoundNumber);
+  }, [
+    activeGame,
+    activeGameBuyIns,
+    activeGameBuyInPromptedAtRound,
+    activeGamePlayers,
+    activeGameRounds,
+    buyInPlayer,
+    editingRound,
+    markBuyInPrompted,
     nextRoundNumber,
   ]);
 
@@ -265,6 +326,8 @@ export default function RoundScreen() {
               totals={sortedTotals}
               showRemaining
               compact
+              showStartingFunds
+              showBuyInTotal
               useInCurrentRoundForOut
             />
 
@@ -324,6 +387,21 @@ export default function RoundScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <BuyInModal
+        visible={buyInPlayer !== null}
+        player={buyInPlayer}
+        roundNumber={nextRoundNumber}
+        currentBalancePence={buyInBalancePence}
+        roundCostPence={playerRoundCost}
+        incrementPence={settings.startingBalanceIncrement}
+        onConfirm={async (amountPence) => {
+          if (!buyInPlayer) return;
+          await recordPlayerBuyIn(buyInPlayer.id, nextRoundNumber, amountPence);
+          setBuyInPlayer(null);
+        }}
+        onStayOut={() => setBuyInPlayer(null)}
+      />
     </FeltBackground>
   );
 }

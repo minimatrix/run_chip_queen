@@ -10,7 +10,7 @@ import { useAppStore } from '@/store/useAppStore';
 export default function HistoryScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeGame, activeGamePlayers, activeGameRounds, deleteRound } =
+  const { activeGame, activeGamePlayers, activeGameRounds, activeGameBuyIns, deleteRound } =
     useAppStore();
 
   if (!activeGame) return null;
@@ -30,6 +30,7 @@ export default function HistoryScreen() {
           game={activeGame}
           players={activeGamePlayers}
           rounds={activeGameRounds}
+          buyIns={activeGameBuyIns}
           onEditRound={handleEdit}
           onDeleteRound={deleteRound}
         />

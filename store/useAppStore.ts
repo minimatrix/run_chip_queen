@@ -9,13 +9,17 @@ import {
   getAllGames,
   getAllPlayers,
   getGame,
+  getGameBuyIns,
+  getGamePlayerMeta,
   getGamePlayers,
   getGameRounds,
   getRound,
   getSettings,
   insertGame,
   insertPlayer,
+  insertPlayerBuyIn,
   insertRound,
+  setBuyInPromptedAtRound,
   updatePlayer as dbUpdatePlayer,
   updateRound as dbUpdateRound,
   updateSettings as dbUpdateSettings,
@@ -27,6 +31,7 @@ import type {
   Game,
   GameWithMeta,
   Player,
+  PlayerBuyIn,
   Round,
 } from '@/lib/types';
 
@@ -38,6 +43,8 @@ type AppStore = {
   activeGame: Game | null;
   activeGamePlayers: Player[];
   activeGameRounds: Round[];
+  activeGameBuyIns: PlayerBuyIn[];
+  activeGameBuyInPromptedAtRound: Record<string, number | null>;
 
   init: () => Promise<void>;
   refreshGames: () => Promise<void>;
@@ -57,6 +64,12 @@ type AppStore = {
   deleteGame: (gameId: string) => Promise<void>;
   saveRound: (round: Omit<Round, 'id' | 'createdAt'> & { id?: string }) => Promise<void>;
   deleteRound: (roundId: string) => Promise<void>;
+  recordPlayerBuyIn: (
+    playerId: string,
+    roundNumber: number,
+    amountPence: number,
+  ) => Promise<void>;
+  markBuyInPrompted: (playerId: string, roundNumber: number) => Promise<void>;
   addGlobalPlayer: (name: string) => Promise<Player>;
   updateGlobalPlayer: (player: Player) => Promise<void>;
   deleteGlobalPlayer: (playerId: string) => Promise<void>;
@@ -72,6 +85,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   activeGame: null,
   activeGamePlayers: [],
   activeGameRounds: [],
+  activeGameBuyIns: [],
+  activeGameBuyInPromptedAtRound: {},
 
   init: async () => {
     const db = await getDatabase();
@@ -98,15 +113,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const game = await getGame(db, gameId);
     if (!game) return;
 
-    const [players, rounds] = await Promise.all([
+    const [players, rounds, buyIns, playerMeta] = await Promise.all([
       getGamePlayers(db, gameId),
       getGameRounds(db, gameId),
+      getGameBuyIns(db, gameId),
+      getGamePlayerMeta(db, gameId),
     ]);
 
     set({
       activeGame: game,
       activeGamePlayers: players,
       activeGameRounds: rounds,
+      activeGameBuyIns: buyIns,
+      activeGameBuyInPromptedAtRound: Object.fromEntries(
+        playerMeta.map((row) => [row.playerId, row.buyInPromptedAtRound]),
+      ),
     });
   },
 
@@ -115,6 +136,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       activeGame: null,
       activeGamePlayers: [],
       activeGameRounds: [],
+      activeGameBuyIns: [],
+      activeGameBuyInPromptedAtRound: {},
     });
   },
 
@@ -123,12 +146,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const game = await getGame(db, gameId);
     if (!game) return null;
 
-    const [players, rounds] = await Promise.all([
+    const [players, rounds, buyIns] = await Promise.all([
       getGamePlayers(db, gameId),
       getGameRounds(db, gameId),
+      getGameBuyIns(db, gameId),
     ]);
 
-    const totals = calculatePlayerTotals(game, rounds, players);
+    const totals = calculatePlayerTotals(game, rounds, players, buyIns);
     const leader = [...totals].sort((a, b) => b.total - a.total)[0]?.name;
 
     return { rounds: rounds.length, leader };
@@ -228,6 +252,39 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ activeGameRounds: rounds });
   },
 
+  recordPlayerBuyIn: async (playerId, roundNumber, amountPence) => {
+    const db = await getDatabase();
+    const { activeGame } = get();
+    if (!activeGame || amountPence <= 0) return;
+
+    const buyIn: PlayerBuyIn = {
+      id: generateId(),
+      gameId: activeGame.id,
+      playerId,
+      roundNumber,
+      amountPence,
+      createdAt: new Date().toISOString(),
+    };
+
+    await insertPlayerBuyIn(db, buyIn);
+    await setBuyInPromptedAtRound(db, activeGame.id, playerId, roundNumber);
+    await get().loadGame(activeGame.id);
+  },
+
+  markBuyInPrompted: async (playerId, roundNumber) => {
+    const db = await getDatabase();
+    const { activeGame } = get();
+    if (!activeGame) return;
+
+    await setBuyInPromptedAtRound(db, activeGame.id, playerId, roundNumber);
+    set({
+      activeGameBuyInPromptedAtRound: {
+        ...get().activeGameBuyInPromptedAtRound,
+        [playerId]: roundNumber,
+      },
+    });
+  },
+
   deleteRound: async (roundId: string) => {
     const db = await getDatabase();
     const { activeGame } = get();
@@ -286,6 +343,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       activeGame: null,
       activeGamePlayers: [],
       activeGameRounds: [],
+      activeGameBuyIns: [],
+      activeGameBuyInPromptedAtRound: {},
     });
   },
 }));

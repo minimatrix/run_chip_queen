@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { theme, fonts } from '@/constants/theme';
 import { formatMoney } from '@/lib/format';
 import type { PlayerTotal } from '@/lib/types';
+import { AnimatedPressable } from './AnimatedPressable';
 import { GlassPanel } from './GlassPanel';
 import { PokerChip } from './PokerChip';
 
@@ -14,6 +15,12 @@ type LeaderboardPanelProps = {
   balanceLabel?: string;
   /** When true, only players not in the current round show as Out. */
   useInCurrentRoundForOut?: boolean;
+  /** Show each player's game starting balance (round screen). */
+  showStartingFunds?: boolean;
+  /** Show cumulative mid-game buy-in total (round screen). */
+  showBuyInTotal?: boolean;
+  /** Tap a row to trigger an action (e.g. manual buy-in on Totals). */
+  onPlayerPress?: (row: PlayerTotal) => void;
 };
 
 function isPlayerOut(
@@ -34,6 +41,9 @@ export function LeaderboardPanel({
   compact = false,
   balanceLabel = 'Left',
   useInCurrentRoundForOut = false,
+  showStartingFunds = false,
+  showBuyInTotal = false,
+  onPlayerPress,
 }: LeaderboardPanelProps) {
   const sorted = [...totals].sort((a, b) =>
     showRemaining ? b.remaining - a.remaining : b.total - a.total,
@@ -50,60 +60,104 @@ export function LeaderboardPanel({
             <Text style={styles.headerCell}>Queen</Text>
           </>
         ) : null}
+        {showStartingFunds ? (
+          <Text style={styles.headerCell}>Start</Text>
+        ) : null}
+        {showBuyInTotal ? (
+          <Text style={styles.headerCell}>Top-up</Text>
+        ) : null}
         <Text style={[styles.headerCell, styles.totalCol]}>
           {showRemaining ? balanceLabel : 'Won'}
         </Text>
       </View>
-      {sorted.map((row, index) => (
-        <View
-          key={row.playerId}
-          style={[
-            styles.row,
-            index % 2 === 1 && styles.rowAlt,
-            isPlayerOut(row, showRemaining, useInCurrentRoundForOut) &&
-              styles.rowOut,
-          ]}
-        >
-          <View style={[styles.nameCol, styles.nameCell]}>
-            <Text style={styles.medal}>{MEDALS[index] ?? `${index + 1}`}</Text>
-            <PokerChip
-              player={{
-                id: row.playerId,
-                name: row.name,
-                color: row.color,
-              }}
-              showName={false}
-              size="small"
-              inline
-            />
-            <Text style={styles.playerName} numberOfLines={1}>
-              {row.name}
+      {sorted.map((row, index) => {
+        const rowContent = (
+          <>
+            <View style={[styles.nameCol, styles.nameCell]}>
+              <Text style={styles.medal}>{MEDALS[index] ?? `${index + 1}`}</Text>
+              <PokerChip
+                player={{
+                  id: row.playerId,
+                  name: row.name,
+                  color: row.color,
+                }}
+                showName={false}
+                size="small"
+                inline
+              />
+              <Text style={styles.playerName} numberOfLines={1}>
+                {row.name}
+              </Text>
+            </View>
+            {!compact ? (
+              <>
+                <Text style={styles.cell}>{formatMoney(row.run)}</Text>
+                <Text style={styles.cell}>{formatMoney(row.chip)}</Text>
+                <Text style={styles.cell}>{formatMoney(row.queen)}</Text>
+              </>
+            ) : null}
+            {showStartingFunds ? (
+              <Text style={styles.cell}>
+                {formatMoney(row.startingFunds ?? 0)}
+              </Text>
+            ) : null}
+            {showBuyInTotal ? (
+              <Text
+                style={[
+                  styles.cell,
+                  (row.buyInTotal ?? 0) > 0 && styles.buyInValue,
+                ]}
+              >
+                {(row.buyInTotal ?? 0) > 0
+                  ? formatMoney(row.buyInTotal ?? 0)
+                  : '—'}
+              </Text>
+            ) : null}
+            <Text
+              style={[
+                styles.cell,
+                styles.totalCol,
+                styles.totalValue,
+                isPlayerOut(row, showRemaining, useInCurrentRoundForOut) &&
+                  styles.out,
+              ]}
+            >
+              {showRemaining
+                ? isPlayerOut(row, showRemaining, useInCurrentRoundForOut)
+                  ? 'Out'
+                  : formatMoney(row.remaining)
+                : formatMoney(row.total)}
             </Text>
+          </>
+        );
+
+        const rowStyle = [
+          styles.row,
+          index % 2 === 1 && styles.rowAlt,
+          isPlayerOut(row, showRemaining, useInCurrentRoundForOut) &&
+            styles.rowOut,
+          onPlayerPress && styles.rowPressable,
+        ];
+
+        if (onPlayerPress) {
+          return (
+            <AnimatedPressable
+              key={row.playerId}
+              onPress={() => onPlayerPress(row)}
+              style={rowStyle}
+              scaleTo={0.99}
+            >
+              {rowContent}
+            </AnimatedPressable>
+          );
+        }
+
+        return (
+          <View key={row.playerId} style={rowStyle}>
+            {rowContent}
           </View>
-          {!compact ? (
-            <>
-              <Text style={styles.cell}>{formatMoney(row.run)}</Text>
-              <Text style={styles.cell}>{formatMoney(row.chip)}</Text>
-              <Text style={styles.cell}>{formatMoney(row.queen)}</Text>
-            </>
-          ) : null}
-          <Text
-            style={[
-              styles.cell,
-              styles.totalCol,
-              styles.totalValue,
-              isPlayerOut(row, showRemaining, useInCurrentRoundForOut) &&
-                styles.out,
-            ]}
-          >
-            {showRemaining
-              ? isPlayerOut(row, showRemaining, useInCurrentRoundForOut)
-                ? 'Out'
-                : formatMoney(row.remaining)
-              : formatMoney(row.total)}
-          </Text>
-        </View>
-      ))}
+        );
+      })}
     </GlassPanel>
   );
 }
@@ -133,7 +187,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   nameCol: {
-    flex: 2.2,
+    flex: 1.8,
     textAlign: 'left',
   },
   totalCol: {
@@ -153,6 +207,7 @@ const styles = StyleSheet.create({
   rowOut: {
     opacity: 0.55,
   },
+  rowPressable: {},
   nameCell: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -184,5 +239,9 @@ const styles = StyleSheet.create({
   out: {
     color: theme.danger,
     fontSize: 11,
+  },
+  buyInValue: {
+    color: theme.goldDark,
+    fontFamily: fonts.sansBold,
   },
 });

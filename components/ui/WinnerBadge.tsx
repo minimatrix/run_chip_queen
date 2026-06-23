@@ -8,12 +8,9 @@ type WinnerBadgeProps = {
   payout?: number;
 };
 
-const POT_EMOJI = { Run: '🏃', Chip: '🟠', Queen: '👑' };
-
 export function WinnerBadge({ pot, name, payout }: WinnerBadgeProps) {
   return (
     <View style={styles.badge}>
-      <Text style={styles.emoji}>{POT_EMOJI[pot]}</Text>
       <Text style={styles.label}>{pot}</Text>
       <Text style={styles.arrow}>→</Text>
       <Text style={styles.name}>{name}</Text>
@@ -30,9 +27,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
-  },
-  emoji: {
-    fontSize: 12,
   },
   label: {
     fontFamily: fonts.sansBold,

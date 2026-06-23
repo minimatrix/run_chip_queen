@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const CREATE_TABLES = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS game_players (
   gameId TEXT NOT NULL,
   playerId TEXT NOT NULL,
   playerOrder INTEGER NOT NULL DEFAULT 0,
+  buyInPromptedAtRound INTEGER,
   PRIMARY KEY (gameId, playerId),
   FOREIGN KEY (gameId) REFERENCES games(id) ON DELETE CASCADE,
   FOREIGN KEY (playerId) REFERENCES players(id) ON DELETE CASCADE
@@ -40,6 +41,17 @@ CREATE TABLE IF NOT EXISTS rounds (
   notes TEXT,
   createdAt TEXT NOT NULL,
   FOREIGN KEY (gameId) REFERENCES games(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS player_buy_ins (
+  id TEXT PRIMARY KEY NOT NULL,
+  gameId TEXT NOT NULL,
+  playerId TEXT NOT NULL,
+  roundNumber INTEGER NOT NULL,
+  amountPence INTEGER NOT NULL,
+  createdAt TEXT NOT NULL,
+  FOREIGN KEY (gameId) REFERENCES games(id) ON DELETE CASCADE,
+  FOREIGN KEY (playerId) REFERENCES players(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS settings (

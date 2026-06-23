@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { pickPlayerColor } from '../colors';
-import type { Game, Player, Round } from '../types';
+import type { Game, Player, PlayerBuyIn, Round } from '../types';
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -120,6 +120,71 @@ export async function getGamePlayers(
      ORDER BY gp.playerOrder ASC`,
     [gameId],
   );
+}
+
+export async function getGameBuyIns(
+  db: SQLiteDatabase,
+  gameId: string,
+): Promise<PlayerBuyIn[]> {
+  return db.getAllAsync<PlayerBuyIn>(
+    `SELECT id, gameId, playerId, roundNumber, amountPence, createdAt
+     FROM player_buy_ins
+     WHERE gameId = ?
+     ORDER BY roundNumber ASC, createdAt ASC`,
+    [gameId],
+  );
+}
+
+export async function insertPlayerBuyIn(
+  db: SQLiteDatabase,
+  buyIn: PlayerBuyIn,
+): Promise<void> {
+  await db.runAsync(
+    `INSERT INTO player_buy_ins (id, gameId, playerId, roundNumber, amountPence, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      buyIn.id,
+      buyIn.gameId,
+      buyIn.playerId,
+      buyIn.roundNumber,
+      buyIn.amountPence,
+      buyIn.createdAt,
+    ],
+  );
+}
+
+export async function getGamePlayerMeta(
+  db: SQLiteDatabase,
+  gameId: string,
+): Promise<{ playerId: string; buyInPromptedAtRound: number | null }[]> {
+  return db.getAllAsync<{ playerId: string; buyInPromptedAtRound: number | null }>(
+    `SELECT playerId, buyInPromptedAtRound
+     FROM game_players
+     WHERE gameId = ?`,
+    [gameId],
+  );
+}
+
+export async function setBuyInPromptedAtRound(
+  db: SQLiteDatabase,
+  gameId: string,
+  playerId: string,
+  roundNumber: number | null,
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE game_players
+     SET buyInPromptedAtRound = ?
+     WHERE gameId = ? AND playerId = ?`,
+    [roundNumber, gameId, playerId],
+  );
+}
+
+export async function clearBuyInPromptedAtRound(
+  db: SQLiteDatabase,
+  gameId: string,
+  playerId: string,
+): Promise<void> {
+  await setBuyInPromptedAtRound(db, gameId, playerId, null);
 }
 
 export async function getGameRounds(
