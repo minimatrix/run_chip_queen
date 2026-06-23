@@ -17,6 +17,48 @@ type AnimatedSplashProps = {
   onFinish: () => void;
 };
 
+type SplashPlayingCardProps = {
+  rank: string;
+  suit: string;
+  suitColor: string;
+  large?: boolean;
+};
+
+function SplashPlayingCard({
+  rank,
+  suit,
+  suitColor,
+  large = false,
+}: SplashPlayingCardProps) {
+  return (
+    <View style={[styles.playingCard, large && styles.playingCardLarge]}>
+      <View style={styles.cornerTop}>
+        <Text style={[styles.cornerRank, large && styles.cornerRankLarge, { color: suitColor }]}>
+          {rank}
+        </Text>
+        <Text style={[styles.cornerSuit, { color: suitColor }]}>{suit}</Text>
+      </View>
+      <View style={styles.centerWrap}>
+        <Text
+          style={[
+            styles.centerSuit,
+            large && styles.centerSuitLarge,
+            { color: suitColor },
+          ]}
+        >
+          {suit}
+        </Text>
+      </View>
+      <View style={styles.cornerBottom}>
+        <Text style={[styles.cornerRank, large && styles.cornerRankLarge, { color: suitColor }]}>
+          {rank}
+        </Text>
+        <Text style={[styles.cornerSuit, { color: suitColor }]}>{suit}</Text>
+      </View>
+    </View>
+  );
+}
+
 export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
   const shine = useSharedValue(-1);
 
@@ -44,13 +86,35 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
         colors={[theme.dark, theme.primary, theme.dark]}
         style={StyleSheet.absoluteFill}
       />
-      <CardSuitPattern opacity={0.1} />
-      <Animated.View entering={FadeIn.duration(600)} style={styles.cards}>
-        <Text style={[styles.card, styles.cardLeft]}>2♣</Text>
-        <Text style={[styles.card, styles.cardCenter]}>Q♠</Text>
-        <Text style={[styles.card, styles.cardRight]}>10♥</Text>
-      </Animated.View>
-      <Animated.View entering={FadeInDown.delay(400).springify()}>
+      <CardSuitPattern opacity={0.08} />
+
+      <View style={styles.cardsFan}>
+        <Animated.View
+          entering={FadeInDown.delay(80).springify()}
+          style={styles.cardWrapLeft}
+        >
+          <SplashPlayingCard rank="2" suit="♣" suitColor={theme.text} />
+        </Animated.View>
+        <Animated.View
+          entering={FadeInDown.delay(160).springify()}
+          style={styles.cardWrapCenter}
+        >
+          <SplashPlayingCard
+            rank="Q"
+            suit="♠"
+            suitColor={theme.text}
+            large
+          />
+        </Animated.View>
+        <Animated.View
+          entering={FadeInDown.delay(240).springify()}
+          style={styles.cardWrapRight}
+        >
+          <SplashPlayingCard rank="10" suit="♥" suitColor={theme.danger} />
+        </Animated.View>
+      </View>
+
+      <Animated.View entering={FadeIn.duration(600)} style={styles.titleBlock}>
         <View style={styles.titleWrap}>
           <Text style={styles.titleRun}>RUN</Text>
           <Text style={styles.titleChip}>CHIP</Text>
@@ -63,6 +127,11 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
   );
 }
 
+const CARD_WIDTH = 54;
+const CARD_HEIGHT = 76;
+const CARD_WIDTH_LG = 62;
+const CARD_HEIGHT_LG = 86;
+
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
@@ -70,37 +139,81 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 999,
   },
-  cards: {
+  cardsFan: {
     flexDirection: 'row',
-    marginBottom: 32,
-    height: 80,
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    height: CARD_HEIGHT_LG + 12,
+    marginBottom: 36,
   },
-  card: {
-    fontFamily: fonts.serifBold,
-    fontSize: 28,
-    color: theme.ivory,
-    backgroundColor: 'rgba(247, 244, 236, 0.12)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.gold,
-    overflow: 'hidden',
-  },
-  cardLeft: {
-    transform: [{ rotate: '-15deg' }],
-    marginRight: -10,
+  cardWrapLeft: {
+    transform: [{ rotate: '-14deg' }],
+    marginRight: -18,
     zIndex: 1,
   },
-  cardCenter: {
+  cardWrapCenter: {
     zIndex: 3,
+    marginBottom: 10,
+  },
+  cardWrapRight: {
+    transform: [{ rotate: '14deg' }],
+    marginLeft: -18,
+    zIndex: 2,
+  },
+  playingCard: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    backgroundColor: theme.ivory,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 183, 93, 0.45)',
+    padding: 7,
+    ...theme.shadowSoft,
+  },
+  playingCardLarge: {
+    width: CARD_WIDTH_LG,
+    height: CARD_HEIGHT_LG,
+    borderRadius: 11,
+    padding: 9,
     ...theme.shadowGold,
   },
-  cardRight: {
-    transform: [{ rotate: '15deg' }],
-    marginLeft: -10,
-    zIndex: 2,
+  cornerTop: {
+    alignSelf: 'flex-start',
+    alignItems: 'center',
+  },
+  cornerBottom: {
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+    transform: [{ rotate: '180deg' }],
+  },
+  cornerRank: {
+    fontFamily: fonts.serifBold,
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  cornerRankLarge: {
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  cornerSuit: {
+    fontSize: 10,
+    lineHeight: 12,
+    marginTop: -1,
+  },
+  centerWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerSuit: {
+    fontSize: 24,
+    opacity: 0.88,
+  },
+  centerSuitLarge: {
+    fontSize: 30,
+  },
+  titleBlock: {
+    alignItems: 'center',
   },
   titleWrap: {
     alignItems: 'center',

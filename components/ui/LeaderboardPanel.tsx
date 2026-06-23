@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { theme, fonts } from '@/constants/theme';
+import { fonts, theme } from '@/constants/theme';
 import { formatMoney } from '@/lib/format';
 import type { PlayerTotal } from '@/lib/types';
+import { StyleSheet, Text, View } from 'react-native';
 import { AnimatedPressable } from './AnimatedPressable';
 import { GlassPanel } from './GlassPanel';
 import { PokerChip } from './PokerChip';
@@ -110,7 +110,7 @@ export function LeaderboardPanel({
               >
                 {(row.buyInTotal ?? 0) > 0
                   ? formatMoney(row.buyInTotal ?? 0)
-                  : '—'}
+                  : '-'}
               </Text>
             ) : null}
             <Text
@@ -119,7 +119,7 @@ export function LeaderboardPanel({
                 styles.totalCol,
                 styles.totalValue,
                 isPlayerOut(row, showRemaining, useInCurrentRoundForOut) &&
-                  styles.out,
+                styles.out,
               ]}
             >
               {showRemaining
@@ -135,7 +135,7 @@ export function LeaderboardPanel({
           styles.row,
           index % 2 === 1 && styles.rowAlt,
           isPlayerOut(row, showRemaining, useInCurrentRoundForOut) &&
-            styles.rowOut,
+          styles.rowOut,
           onPlayerPress && styles.rowPressable,
         ];
 

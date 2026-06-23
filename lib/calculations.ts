@@ -320,7 +320,7 @@ export function getActivePlayerIdsForRound(
   }).activePlayerIds;
 }
 
-/** Who has two hands this round — rotates through player order, skipping those out of funds. */
+/** Who has two hands this round - rotates through player order, skipping those out of funds. */
 export function getTwoHandsPlayerForRound(
   game: Game,
   orderedPlayers: Player[],
@@ -433,7 +433,7 @@ export function calculatePlayerTotals(
   });
 }
 
-/** Totals for the round entry screen — includes buy-in for the round being played. */
+/** Totals for the round entry screen - includes buy-in for the round being played. */
 export function calculatePlayerTotalsForRoundEntry(
   game: Game,
   priorRounds: Round[],

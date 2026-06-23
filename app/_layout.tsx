@@ -66,6 +66,10 @@ export default function RootLayout() {
           name="game/new"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
+        <Stack.Screen
+          name="how-to-play"
+          options={{ animation: 'slide_from_right' }}
+        />
         <Stack.Screen name="game/[id]" />
         <Stack.Screen
           name="settle/[id]"

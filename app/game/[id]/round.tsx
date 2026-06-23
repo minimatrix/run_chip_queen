@@ -1,30 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, List } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
-import { FeltBackground } from '@/components/ui/FeltBackground';
+import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { BuyInModal } from '@/components/ui/BuyInModal';
+import { FeltBackground } from '@/components/ui/FeltBackground';
 import { LeaderboardPanel } from '@/components/ui/LeaderboardPanel';
 import { PotCard } from '@/components/ui/PotCard';
 import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
 import { RoundHeroCard } from '@/components/ui/RoundHeroCard';
 import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
 import { TwoHandsBanner } from '@/components/ui/TwoHandsBanner';
-import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
-import { theme, fonts } from '@/constants/theme';
+import { fonts, theme } from '@/constants/theme';
 import {
   calculatePlayerTotalsForRoundEntry,
   getActivePlayerIdsForRound,
@@ -37,8 +20,25 @@ import {
   getTwoHandsPlayerForRound,
 } from '@/lib/calculations';
 import { formatMoney, formatStake } from '@/lib/format';
-import { useAppStore } from '@/store/useAppStore';
 import type { Player, Round } from '@/lib/types';
+import { useAppStore } from '@/store/useAppStore';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ChevronLeft, List } from 'lucide-react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const emptyForm = {
   runWinnerId: null as string | null,
@@ -307,7 +307,7 @@ export default function RoundScreen() {
             {hasCarryover ? (
               <View style={styles.carryoverBanner}>
                 <Text style={styles.carryoverText}>
-                  ♦ Carryover active — pots include rolled-over amounts
+                  ♦ Carryover active - pots include rolled-over amounts
                 </Text>
               </View>
             ) : null}

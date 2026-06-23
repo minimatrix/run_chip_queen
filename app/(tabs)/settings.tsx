@@ -1,15 +1,17 @@
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeltBackground } from '@/components/ui/FeltBackground';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
-import { theme, fonts } from '@/constants/theme';
+import { fonts, theme } from '@/constants/theme';
 import { formatMoney } from '@/lib/format';
 import { useAppStore } from '@/store/useAppStore';
+import { useRouter } from 'expo-router';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { settings, updateSettings, clearAllData } = useAppStore();
 
   const handleClearAll = () => {
@@ -78,7 +80,7 @@ export default function SettingsScreen() {
                       defaultStartingBalancePence: Math.max(
                         50,
                         settings.defaultStartingBalancePence -
-                          settings.startingBalanceIncrement,
+                        settings.startingBalanceIncrement,
                       ),
                     })
                   }
@@ -103,6 +105,14 @@ export default function SettingsScreen() {
           </GlassPanel>
 
           <GlassPanel style={styles.section}>
+            <Text style={styles.sectionTitle}>Help</Text>
+            <SecondaryGreenButton
+              title="How to Play"
+              onPress={() => router.push('/how-to-play')}
+            />
+          </GlassPanel>
+
+          <GlassPanel style={styles.section}>
             <Text style={styles.sectionTitle}>Data</Text>
             <PrimaryGoldButton
               title="Clear All Data"
@@ -116,7 +126,7 @@ export default function SettingsScreen() {
             <Text style={styles.aboutText}>
               Run, Chip, Queen v1.0.0{'\n\n'}
               Your premium companion for tracking pots around the card table.
-              Each player puts in a fixed stake per pot each round — Run, Chip,
+              Each player puts in a fixed stake per pot each round - Run, Chip,
               and Queen. Totals are calculated automatically from round history.
             </Text>
           </GlassPanel>

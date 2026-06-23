@@ -1,3 +1,16 @@
+import { Confetti } from '@/components/ui/Confetti';
+import { FeltBackground } from '@/components/ui/FeltBackground';
+import { FinalStandingsPanel } from '@/components/ui/FinalStandingsPanel';
+import { GameRoundHistoryList } from '@/components/ui/GameRoundHistoryList';
+import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
+import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
+import { fonts, theme } from '@/constants/theme';
+import { calculatePlayerTotals } from '@/lib/calculations';
+import { buildSettleUpSummary, formatMoney } from '@/lib/format';
+import { useAppStore } from '@/store/useAppStore';
+import * as Haptics from 'expo-haptics';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Trophy } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -7,21 +20,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { Trophy } from 'lucide-react-native';
-import { Confetti } from '@/components/ui/Confetti';
-import { FeltBackground } from '@/components/ui/FeltBackground';
-import { FinalStandingsPanel } from '@/components/ui/FinalStandingsPanel';
-import { GameRoundHistoryList } from '@/components/ui/GameRoundHistoryList';
-import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
-import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
-import { theme, fonts } from '@/constants/theme';
-import { calculatePlayerTotals } from '@/lib/calculations';
-import { buildSettleUpSummary, formatMoney } from '@/lib/format';
-import { useAppStore } from '@/store/useAppStore';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SettleUpScreen() {
   const router = useRouter();
@@ -66,7 +66,7 @@ export default function SettleUpScreen() {
   const handleShare = async () => {
     const sorted = [...totals].sort((a, b) => b.remaining - a.remaining);
     const summary = [
-      `Run, Chip, Queen — ${activeGame.name}`,
+      `Run, Chip, Queen - ${activeGame.name}`,
       '',
       'Final Standings:',
       ...sorted.map((t) => {

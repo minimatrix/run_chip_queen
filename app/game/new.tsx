@@ -1,3 +1,18 @@
+import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
+import { AnimatedStakeExplanation } from '@/components/ui/AnimatedStakeExplanation';
+import { FeltBackground } from '@/components/ui/FeltBackground';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
+import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
+import { StakePill } from '@/components/ui/StakePill';
+import { fonts, theme } from '@/constants/theme';
+import { pickPlayerColor } from '@/lib/colors';
+import type { Player } from '@/lib/types';
+import { useAppStore } from '@/store/useAppStore';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { ChevronDown, ChevronUp, UserPlus, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
   Alert,
@@ -7,23 +22,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { ChevronDown, ChevronUp, UserPlus, X } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { AnimatedStakeExplanation } from '@/components/ui/AnimatedStakeExplanation';
-import { FeltBackground } from '@/components/ui/FeltBackground';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
-import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { SecondaryGreenButton } from '@/components/ui/SecondaryGreenButton';
-import { StakePill } from '@/components/ui/StakePill';
-import { theme, fonts } from '@/constants/theme';
-import { pickPlayerColor } from '@/lib/colors';
-import { useAppStore } from '@/store/useAppStore';
-import type { Player } from '@/lib/types';
-import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NewGameScreen() {
   const router = useRouter();
@@ -198,7 +198,7 @@ export default function NewGameScreen() {
 
           <View style={styles.playerList}>
             <Text style={styles.orderHint}>
-              Two hands order — top player deals first, then rotates each round
+              Two hands order - top player deals first, then rotates each round
             </Text>
             {draftPlayers.map((player, index) => (
               <Animated.View

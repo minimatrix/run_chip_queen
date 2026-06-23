@@ -1,4 +1,3 @@
-import { Alert, FlatList, StyleSheet, View, ViewStyle } from 'react-native';
 import { HistoryRoundCard } from '@/components/ui/HistoryRoundCard';
 import { PremiumEmptyState } from '@/components/ui/PremiumEmptyState';
 import {
@@ -6,6 +5,7 @@ import {
   getTwoHandsPlayerForRound,
 } from '@/lib/calculations';
 import type { Game, Player, PlayerBuyIn, Round } from '@/lib/types';
+import { Alert, FlatList, StyleSheet, View, ViewStyle } from 'react-native';
 
 type GameRoundHistoryListProps = {
   game: Game;
@@ -31,8 +31,8 @@ export function GameRoundHistoryList({
   contentContainerStyle,
 }: GameRoundHistoryListProps) {
   const getPlayerName = (playerId?: string | null) => {
-    if (!playerId) return '—';
-    return players.find((p) => p.id === playerId)?.name ?? '—';
+    if (!playerId) return '-';
+    return players.find((p) => p.id === playerId)?.name ?? '-';
   };
 
   const handleDelete = (roundId: string, roundNumber: number) => {
