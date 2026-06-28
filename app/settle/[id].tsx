@@ -22,8 +22,11 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TabletSplit } from '@/components/ui/TabletSplit';
+import { useLayout } from '@/hooks/useLayout';
 
 export default function SettleUpScreen() {
+  const { isTablet, isWide, contentPadding, splitGap } = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
@@ -84,6 +87,49 @@ export default function SettleUpScreen() {
     await Share.share({ message: summary });
   };
 
+  const standingsSection = (
+    <>
+      <Text style={styles.sectionTitle}>Final Standings</Text>
+      <FinalStandingsPanel totals={totals} columns={isWide ? 2 : 1} />
+    </>
+  );
+
+  const historySection = (
+    <>
+      <Text style={styles.sectionTitle}>Round History</Text>
+      <GameRoundHistoryList
+        game={activeGame}
+        players={activeGamePlayers}
+        rounds={activeGameRounds}
+        buyIns={activeGameBuyIns}
+        allowDelete={false}
+        embedded
+        columns={isTablet ? 2 : 1}
+      />
+    </>
+  );
+
+  const actions = (
+    <>
+      <PrimaryGoldButton
+        title="Share Summary"
+        onPress={handleShare}
+        style={styles.btn}
+      />
+      <SecondaryGreenButton
+        title="New Game"
+        onPress={() => router.replace('/game/new')}
+        style={styles.btn}
+      />
+      <SecondaryGreenButton
+        title="Back to Games"
+        variant="filled"
+        onPress={() => router.replace('/(tabs)')}
+        style={styles.btn}
+      />
+    </>
+  );
+
   return (
     <FeltBackground>
       <Confetti
@@ -91,7 +137,12 @@ export default function SettleUpScreen() {
         onComplete={() => setShowConfetti(false)}
       />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { padding: contentPadding, paddingBottom: 40 },
+          ]}
+        >
           <Animated.View entering={FadeInDown.springify()} style={styles.hero}>
             <Trophy size={56} color={theme.gold} strokeWidth={1.5} />
             <Text style={styles.heroSuit}>♠</Text>
@@ -99,35 +150,22 @@ export default function SettleUpScreen() {
             <Text style={styles.heroSubtitle}>{activeGame.name}</Text>
           </Animated.View>
 
-          <Text style={styles.sectionTitle}>Final Standings</Text>
-          <FinalStandingsPanel totals={totals} />
-
-          <Text style={styles.sectionTitle}>Round History</Text>
-          <GameRoundHistoryList
-            game={activeGame}
-            players={activeGamePlayers}
-            rounds={activeGameRounds}
-            buyIns={activeGameBuyIns}
-            allowDelete={false}
-            embedded
-          />
-
-          <PrimaryGoldButton
-            title="Share Summary"
-            onPress={handleShare}
-            style={styles.btn}
-          />
-          <SecondaryGreenButton
-            title="New Game"
-            onPress={() => router.replace('/game/new')}
-            style={styles.btn}
-          />
-          <SecondaryGreenButton
-            title="Back to Games"
-            variant="filled"
-            onPress={() => router.replace('/(tabs)')}
-            style={styles.btn}
-          />
+          {isTablet ? (
+            <>
+              <TabletSplit
+                gap={splitGap}
+                left={standingsSection}
+                right={historySection}
+              />
+              {actions}
+            </>
+          ) : (
+            <>
+              {standingsSection}
+              {historySection}
+              {actions}
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </FeltBackground>
@@ -143,10 +181,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
+  content: {},
   hero: {
     alignItems: 'center',
     marginBottom: 28,

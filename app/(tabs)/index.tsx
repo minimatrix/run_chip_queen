@@ -12,8 +12,11 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme, fonts } from '@/constants/theme';
 import { useAppStore } from '@/store/useAppStore';
 import type { GameWithMeta } from '@/lib/types';
+import { TabletContent } from '@/components/ui/TabletContent';
+import { useLayout } from '@/hooks/useLayout';
 
 export default function GamesScreen() {
+  const { isWide } = useLayout();
   const router = useRouter();
   const games = useAppStore((s) => s.games);
   const getGamePreview = useAppStore((s) => s.getGamePreview);
@@ -86,6 +89,7 @@ export default function GamesScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
+          <TabletContent>
           {games.length === 0 ? (
             <PremiumEmptyState
               suit="♦"
@@ -106,20 +110,27 @@ export default function GamesScreen() {
               {pastGames.length > 0 ? (
                 <View style={styles.pastSection}>
                   <Text style={styles.pastTitle}>Past Tables</Text>
-                  {pastGames.map((game, index) => (
-                    <PastGameCard
-                      key={game.id}
-                      game={game}
-                      index={index}
-                      onPress={() => handleGamePress(game.id, game.status)}
-                      onDelete={() => handleDeleteGame(game)}
-                    />
-                  ))}
+                  <View style={isWide ? styles.pastGrid : undefined}>
+                    {pastGames.map((game, index) => (
+                      <View
+                        key={game.id}
+                        style={isWide ? styles.pastGridItem : undefined}
+                      >
+                        <PastGameCard
+                          game={game}
+                          index={index}
+                          onPress={() => handleGamePress(game.id, game.status)}
+                          onDelete={() => handleDeleteGame(game)}
+                        />
+                      </View>
+                    ))}
+                  </View>
                 </View>
               ) : null}
             </>
           )}
           <View style={styles.bottomPad} />
+          </TabletContent>
         </ScrollView>
         <FloatingActionButton onPress={() => router.push('/game/new')} />
       </SafeAreaView>
@@ -135,12 +146,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: 20,
     paddingBottom: 100,
     flexGrow: 1,
   },
   pastSection: {
     marginTop: 8,
+  },
+  pastGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  pastGridItem: {
+    flexGrow: 1,
+    flexBasis: '46%',
+    minWidth: 300,
   },
   pastTitle: {
     fontFamily: fonts.sansBold,

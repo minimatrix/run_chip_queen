@@ -24,8 +24,12 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TabletSplit } from '@/components/ui/TabletSplit';
+import { TabletContent } from '@/components/ui/TabletContent';
+import { useLayout } from '@/hooks/useLayout';
 
 export default function NewGameScreen() {
+  const { isTablet, splitGap } = useLayout();
   const router = useRouter();
   const { settings, globalPlayers, createGame } = useAppStore();
   const [gameName, setGameName] = useState('');
@@ -115,6 +119,135 @@ export default function NewGameScreen() {
     }
   };
 
+  const setupSection = (
+    <>
+      <Text style={styles.label}>Table name</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g. Saturday Night"
+        placeholderTextColor={theme.muted}
+        value={gameName}
+        onChangeText={setGameName}
+      />
+
+      <Text style={styles.label}>Stake per pot per player</Text>
+      <StakePill
+        value={stake}
+        onDecrement={() => setStake(Math.max(increment, stake - increment))}
+        onIncrement={() => setStake(stake + increment)}
+        min={increment}
+      />
+
+      <Text style={styles.label}>Starting balance per player</Text>
+      <StakePill
+        value={startingBalance}
+        format="money"
+        onDecrement={() =>
+          setStartingBalance(
+            Math.max(balanceIncrement, startingBalance - balanceIncrement),
+          )
+        }
+        onIncrement={() =>
+          setStartingBalance(startingBalance + balanceIncrement)
+        }
+        min={balanceIncrement}
+      />
+
+      <AnimatedStakeExplanation
+        playerCount={displayPlayerCount}
+        stakePence={stake}
+      />
+    </>
+  );
+
+  const playersSection = (
+    <>
+      <Text style={styles.label}>Deal in players</Text>
+      <View style={styles.addRow}>
+        <TextInput
+          style={[styles.input, styles.flexInput]}
+          placeholder="Player name"
+          placeholderTextColor={theme.muted}
+          value={playerName}
+          onChangeText={setPlayerName}
+          onSubmitEditing={() => addPlayer(playerName)}
+        />
+        <AnimatedPressable
+          style={styles.addBtn}
+          onPress={() => addPlayer(playerName)}
+          scaleTo={0.9}
+        >
+          <UserPlus size={22} color={theme.dark} />
+        </AnimatedPressable>
+      </View>
+
+      {globalPlayers.length > 0 ? (
+        <GlassPanel style={styles.savedSection}>
+          <Text style={styles.savedLabel}>Quick add saved players</Text>
+          <View style={styles.savedRow}>
+            {globalPlayers.map((p) => (
+              <PlayerAvatar
+                key={p.id}
+                player={p}
+                size="small"
+                onPress={() => addSavedPlayer(p)}
+              />
+            ))}
+          </View>
+        </GlassPanel>
+      ) : null}
+
+      <View style={styles.playerList}>
+        <Text style={styles.orderHint}>
+          Two hands order - top player deals first, then rotates each round
+        </Text>
+        {draftPlayers.map((player, index) => (
+          <Animated.View key={player.id} entering={FadeInDown.springify()}>
+            <GlassPanel style={styles.playerRow}>
+              <View style={styles.orderBadge}>
+                <Text style={styles.orderBadgeText}>{index + 1}</Text>
+              </View>
+              <PlayerAvatar player={player} showName={false} size="small" />
+              <Text style={styles.playerRowName}>{player.name}</Text>
+              <View style={styles.orderActions}>
+                <AnimatedPressable
+                  onPress={() => movePlayer(index, -1)}
+                  disabled={index === 0}
+                  style={index === 0 && styles.orderBtnDisabled}
+                >
+                  <ChevronUp
+                    size={20}
+                    color={index === 0 ? theme.muted : theme.gold}
+                  />
+                </AnimatedPressable>
+                <AnimatedPressable
+                  onPress={() => movePlayer(index, 1)}
+                  disabled={index === draftPlayers.length - 1}
+                  style={
+                    index === draftPlayers.length - 1 &&
+                    styles.orderBtnDisabled
+                  }
+                >
+                  <ChevronDown
+                    size={20}
+                    color={
+                      index === draftPlayers.length - 1
+                        ? theme.muted
+                        : theme.gold
+                    }
+                  />
+                </AnimatedPressable>
+              </View>
+              <AnimatedPressable onPress={() => removePlayer(player.id)}>
+                <X size={20} color={theme.danger} />
+              </AnimatedPressable>
+            </GlassPanel>
+          </Animated.View>
+        ))}
+      </View>
+    </>
+  );
+
   return (
     <FeltBackground>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -124,142 +257,35 @@ export default function NewGameScreen() {
           suit="♥"
         />
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.label}>Table name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Saturday Night"
-            placeholderTextColor={theme.muted}
-            value={gameName}
-            onChangeText={setGameName}
-          />
+          <TabletContent>
+            {isTablet ? (
+              <TabletSplit
+                gap={splitGap}
+                leftFlex={1}
+                rightFlex={1}
+                left={setupSection}
+                right={playersSection}
+              />
+            ) : (
+              <>
+                {setupSection}
+                {playersSection}
+              </>
+            )}
 
-          <Text style={styles.label}>Stake per pot per player</Text>
-          <StakePill
-            value={stake}
-            onDecrement={() => setStake(Math.max(increment, stake - increment))}
-            onIncrement={() => setStake(stake + increment)}
-            min={increment}
-          />
-
-          <Text style={styles.label}>Starting balance per player</Text>
-          <StakePill
-            value={startingBalance}
-            format="money"
-            onDecrement={() =>
-              setStartingBalance(
-                Math.max(balanceIncrement, startingBalance - balanceIncrement),
-              )
-            }
-            onIncrement={() =>
-              setStartingBalance(startingBalance + balanceIncrement)
-            }
-            min={balanceIncrement}
-          />
-
-          <AnimatedStakeExplanation
-            playerCount={displayPlayerCount}
-            stakePence={stake}
-          />
-
-          <Text style={styles.label}>Deal in players</Text>
-          <View style={styles.addRow}>
-            <TextInput
-              style={[styles.input, styles.flexInput]}
-              placeholder="Player name"
-              placeholderTextColor={theme.muted}
-              value={playerName}
-              onChangeText={setPlayerName}
-              onSubmitEditing={() => addPlayer(playerName)}
+            <PrimaryGoldButton
+              title="Deal In"
+              onPress={handleStart}
+              loading={loading}
+              disabled={draftPlayers.length < 2 || !gameName.trim()}
+              style={styles.startBtn}
             />
-            <AnimatedPressable
-              style={styles.addBtn}
-              onPress={() => addPlayer(playerName)}
-              scaleTo={0.9}
-            >
-              <UserPlus size={22} color={theme.dark} />
-            </AnimatedPressable>
-          </View>
-
-          {globalPlayers.length > 0 ? (
-            <GlassPanel style={styles.savedSection}>
-              <Text style={styles.savedLabel}>Quick add saved players</Text>
-              <View style={styles.savedRow}>
-                {globalPlayers.map((p) => (
-                  <PlayerAvatar
-                    key={p.id}
-                    player={p}
-                    size="small"
-                    onPress={() => addSavedPlayer(p)}
-                  />
-                ))}
-              </View>
-            </GlassPanel>
-          ) : null}
-
-          <View style={styles.playerList}>
-            <Text style={styles.orderHint}>
-              Two hands order - top player deals first, then rotates each round
-            </Text>
-            {draftPlayers.map((player, index) => (
-              <Animated.View
-                key={player.id}
-                entering={FadeInDown.springify()}
-              >
-                <GlassPanel style={styles.playerRow}>
-                  <View style={styles.orderBadge}>
-                    <Text style={styles.orderBadgeText}>{index + 1}</Text>
-                  </View>
-                  <PlayerAvatar player={player} showName={false} size="small" />
-                  <Text style={styles.playerRowName}>{player.name}</Text>
-                  <View style={styles.orderActions}>
-                    <AnimatedPressable
-                      onPress={() => movePlayer(index, -1)}
-                      disabled={index === 0}
-                      style={index === 0 && styles.orderBtnDisabled}
-                    >
-                      <ChevronUp
-                        size={20}
-                        color={index === 0 ? theme.muted : theme.gold}
-                      />
-                    </AnimatedPressable>
-                    <AnimatedPressable
-                      onPress={() => movePlayer(index, 1)}
-                      disabled={index === draftPlayers.length - 1}
-                      style={
-                        index === draftPlayers.length - 1 &&
-                        styles.orderBtnDisabled
-                      }
-                    >
-                      <ChevronDown
-                        size={20}
-                        color={
-                          index === draftPlayers.length - 1
-                            ? theme.muted
-                            : theme.gold
-                        }
-                      />
-                    </AnimatedPressable>
-                  </View>
-                  <AnimatedPressable onPress={() => removePlayer(player.id)}>
-                    <X size={20} color={theme.danger} />
-                  </AnimatedPressable>
-                </GlassPanel>
-              </Animated.View>
-            ))}
-          </View>
-
-          <PrimaryGoldButton
-            title="Deal In"
-            onPress={handleStart}
-            loading={loading}
-            disabled={draftPlayers.length < 2 || !gameName.trim()}
-            style={styles.startBtn}
-          />
-          <SecondaryGreenButton
-            title="Cancel"
-            onPress={() => router.back()}
-            style={styles.cancelBtn}
-          />
+            <SecondaryGreenButton
+              title="Cancel"
+              onPress={() => router.back()}
+              style={styles.cancelBtn}
+            />
+          </TabletContent>
         </ScrollView>
       </SafeAreaView>
     </FeltBackground>
@@ -271,7 +297,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
     paddingBottom: 40,
   },
   label: {

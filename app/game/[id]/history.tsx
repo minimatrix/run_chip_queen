@@ -6,8 +6,10 @@ import { GameRoundHistoryList } from '@/components/ui/GameRoundHistoryList';
 import { PrimaryGoldButton } from '@/components/ui/PrimaryGoldButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useAppStore } from '@/store/useAppStore';
+import { useLayout } from '@/hooks/useLayout';
 
 export default function HistoryScreen() {
+  const { isTablet, isWide } = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { activeGame, activeGamePlayers, activeGameRounds, activeGameBuyIns, deleteRound } =
@@ -33,8 +35,14 @@ export default function HistoryScreen() {
           buyIns={activeGameBuyIns}
           onEditRound={handleEdit}
           onDeleteRound={deleteRound}
+          columns={isWide ? 2 : 1}
         />
-        <View style={styles.footer}>
+        <View
+          style={[
+            styles.footer,
+            isTablet ? styles.footerTablet : null,
+          ]}
+        >
           <PrimaryGoldButton
             title="Add Next Round"
             onPress={() =>
@@ -60,5 +68,10 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     paddingBottom: 24,
+    width: '100%',
+  },
+  footerTablet: {
+    maxWidth: 960,
+    alignSelf: 'center',
   },
 });

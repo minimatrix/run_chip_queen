@@ -10,13 +10,16 @@ import {
   TwoHandsVisual,
 } from '@/components/ui/HowToPlayVisuals';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { TabletContent } from '@/components/ui/TabletContent';
 import { fonts, theme } from '@/constants/theme';
+import { useLayout } from '@/hooks/useLayout';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HowToPlayScreen() {
+  const { isWide } = useLayout();
   const router = useRouter();
 
   return (
@@ -34,12 +37,14 @@ export default function HowToPlayScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
+          <TabletContent>
           <ScreenHeader
             title="How to Play"
             subtitle="Run, Chip, Queen - the full guide."
             suit="♣"
           />
 
+          <View style={isWide ? styles.sectionsGrid : undefined}>
           <RuleSection
             title="The basics"
             body="Each round has three pots - Run, Chip, and Queen. Every player who can afford it puts the same stake into each pot. After the hand, pick who won each pot and the app tracks everyone's money automatically."
@@ -72,7 +77,7 @@ export default function HowToPlayScreen() {
 
           <RuleSection
             title="Two Hands"
-            body="Each round, one player is marked as having 'Two Hands' - it rotates through the table order, skipping anyone who can't afford that round. It's a table tradition marker so everyone knows whose turn it is at the felt."
+            body="Each round, one seat in the table order is marked for Two Hands — round 1 is player 1, round 2 is player 2, and so on. If that player is out, the next player in order stands in. When they buy back in, they take their own seat turns again."
           >
             <TwoHandsVisual />
           </RuleSection>
@@ -105,14 +110,16 @@ export default function HowToPlayScreen() {
             title="Leaderboard & finishing"
             body="The Totals tab shows live standings with winnings and what's left in each player's stack. When the table is done, end the game from the More tab to see final standings, round-by-round history, and a shareable summary for settling up."
           />
+          </View>
 
-          <GlassPanel style={styles.tipPanel}>
+          <GlassPanel style={[styles.tipPanel, isWide && styles.tipPanelWide]}>
             <Text style={styles.tipTitle}>Quick tip</Text>
             <Text style={styles.tipBody}>
               Adjust the default stake increment and starting balance in
               Settings - new games pick up those values automatically.
             </Text>
           </GlassPanel>
+          </TabletContent>
         </ScrollView>
       </SafeAreaView>
     </FeltBackground>
@@ -128,8 +135,10 @@ function RuleSection({
   body: string;
   children?: React.ReactNode;
 }) {
+  const { isWide } = useLayout();
+
   return (
-    <GlassPanel style={styles.section}>
+    <GlassPanel style={[styles.section, isWide && styles.sectionGrid]}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <Text style={styles.sectionBody}>{body}</Text>
       {children ? <View style={styles.visual}>{children}</View> : null}
@@ -163,10 +172,20 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 40,
   },
+  sectionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+  },
   section: {
-    marginHorizontal: 20,
     marginBottom: 14,
     padding: 16,
+  },
+  sectionGrid: {
+    flexGrow: 1,
+    flexBasis: '46%',
+    minWidth: 320,
+    marginBottom: 0,
   },
   sectionTitle: {
     fontFamily: fonts.serifBold,
@@ -193,10 +212,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tipPanel: {
-    marginHorizontal: 20,
-    marginTop: 6,
+    marginTop: 14,
     padding: 16,
     marginBottom: 8,
+  },
+  tipPanelWide: {
+    marginTop: 20,
   },
   tipTitle: {
     fontFamily: fonts.sansBold,

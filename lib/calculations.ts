@@ -320,7 +320,18 @@ export function getActivePlayerIdsForRound(
   }).activePlayerIds;
 }
 
-/** Who has two hands this round - rotates through player order, skipping those out of funds. */
+/** Seat index for two hands this round — fixed to player order, not who is active. */
+export function getTwoHandsSeatIndex(
+  roundNumber: number,
+  playerCount: number,
+): number {
+  if (playerCount === 0 || roundNumber < 1) {
+    return 0;
+  }
+  return (roundNumber - 1) % playerCount;
+}
+
+/** Who has two hands this round — seat holder if active, otherwise next active player in order. */
 export function getTwoHandsPlayerForRound(
   game: Game,
   orderedPlayers: Player[],
@@ -351,7 +362,7 @@ export function getTwoHandsPlayerForRound(
     return null;
   }
 
-  const startIndex = (roundNumber - 1) % orderedPlayers.length;
+  const startIndex = getTwoHandsSeatIndex(roundNumber, orderedPlayers.length);
 
   for (let offset = 0; offset < orderedPlayers.length; offset++) {
     const player = orderedPlayers[(startIndex + offset) % orderedPlayers.length];

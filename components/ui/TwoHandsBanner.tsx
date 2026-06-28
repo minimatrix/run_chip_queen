@@ -1,4 +1,4 @@
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Hand } from 'lucide-react-native';
 import { theme, fonts } from '@/constants/theme';
 import { twoHandsLabel } from '@/lib/format';
@@ -8,9 +8,11 @@ import { PokerChip } from './PokerChip';
 
 type TwoHandsBannerProps = {
   player: Player | null;
+  /** Whose seat turn it is this round (may differ from player when substituting). */
+  seatHolder?: Player | null;
 };
 
-export function TwoHandsBanner({ player }: TwoHandsBannerProps) {
+export function TwoHandsBanner({ player, seatHolder }: TwoHandsBannerProps) {
   if (!player) {
     return (
       <GlassPanel style={styles.empty}>
@@ -20,11 +22,21 @@ export function TwoHandsBanner({ player }: TwoHandsBannerProps) {
     );
   }
 
+  const isSubstitute =
+    seatHolder !== undefined &&
+    seatHolder !== null &&
+    seatHolder.id !== player.id;
+
   return (
     <GlassPanel variant="gold" style={styles.container}>
       <PokerChip player={player} showName={false} size="small" />
       <Hand size={20} color={theme.gold} />
-      <Text style={styles.label}>{twoHandsLabel(player.name)}</Text>
+      <View style={styles.labelBlock}>
+        <Text style={styles.label}>{twoHandsLabel(player.name)}</Text>
+        {isSubstitute ? (
+          <Text style={styles.subLabel}>{seatHolder.name}&apos;s turn</Text>
+        ) : null}
+      </View>
     </GlassPanel>
   );
 }
@@ -51,6 +63,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serifBold,
     fontSize: 18,
     color: theme.gold,
+  },
+  labelBlock: {
+    alignItems: 'center',
+  },
+  subLabel: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginTop: 2,
   },
   emptyText: {
     fontFamily: fonts.sansMedium,

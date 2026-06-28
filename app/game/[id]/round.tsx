@@ -39,6 +39,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TabletSplit } from '@/components/ui/TabletSplit';
+import { useLayout } from '@/hooks/useLayout';
 
 const emptyForm = {
   runWinnerId: null as string | null,
@@ -48,6 +50,7 @@ const emptyForm = {
 };
 
 export default function RoundScreen() {
+  const { isTablet, isWide, contentPadding, splitGap } = useLayout();
   const router = useRouter();
   const { id, roundId, roundNumber: roundNumberParam } = useLocalSearchParams<{
     id: string;
@@ -276,6 +279,90 @@ export default function RoundScreen() {
     }
   };
 
+  const potCards = (
+    <>
+      <PotCard
+        type="run"
+        players={activeGamePlayers}
+        potValuePence={currentPotValues.run}
+        basePotValuePence={basePotValue}
+        selectedId={runWinnerId}
+        disabledPlayerIds={disabledPlayerIds}
+        onSelect={setRunWinnerId}
+        style={isWide ? styles.potInRow : undefined}
+      />
+      <PotCard
+        type="chip"
+        players={activeGamePlayers}
+        potValuePence={currentPotValues.chip}
+        basePotValuePence={basePotValue}
+        selectedId={chipWinnerId}
+        disabledPlayerIds={disabledPlayerIds}
+        onSelect={setChipWinnerId}
+        style={isWide ? styles.potInRow : undefined}
+      />
+      <PotCard
+        type="queen"
+        players={activeGamePlayers}
+        potValuePence={currentPotValues.queen}
+        basePotValuePence={basePotValue}
+        selectedId={queenWinnerId}
+        disabledPlayerIds={disabledPlayerIds}
+        onSelect={setQueenWinnerId}
+        style={isWide ? styles.potInRow : undefined}
+      />
+    </>
+  );
+
+  const potsSection = isWide ? (
+    <View style={styles.potsRow}>{potCards}</View>
+  ) : (
+    potCards
+  );
+
+  const leaderboard = (
+    <LeaderboardPanel
+      totals={sortedTotals}
+      showRemaining
+      compact={!isTablet}
+      showStartingFunds
+      showBuyInTotal
+      useInCurrentRoundForOut
+    />
+  );
+
+  const notesSection = (
+    <>
+      <Text style={styles.notesLabel}>Notes (optional)</Text>
+      <TextInput
+        style={styles.notesInput}
+        placeholder="Any notes for this round..."
+        placeholderTextColor={theme.muted}
+        value={notes}
+        onChangeText={setNotes}
+        multiline
+      />
+    </>
+  );
+
+  const navSection = (
+    <View style={styles.navRow}>
+      {nextRoundNumber > 1 ? (
+        <SecondaryGreenButton
+          title="Previous Round"
+          onPress={goToPreviousRound}
+          style={styles.navBtn}
+        />
+      ) : null}
+      <PrimaryGoldButton
+        title={editingRound ? 'Update Round' : 'Save Round'}
+        onPress={handleSave}
+        loading={saving}
+        style={styles.navBtn}
+      />
+    </View>
+  );
+
   return (
     <FeltBackground>
       <SafeAreaView style={styles.safe} edges={['top']}>
@@ -295,7 +382,12 @@ export default function RoundScreen() {
           </AnimatedPressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { padding: contentPadding, paddingBottom: 40 },
+          ]}
+        >
           <Animated.View style={flipStyle}>
             <RoundHeroCard
               roundNumber={nextRoundNumber}
@@ -320,71 +412,39 @@ export default function RoundScreen() {
               </Text>
             </View>
 
-            <TwoHandsBanner player={twoHandsPlayer} />
-
-            <LeaderboardPanel
-              totals={sortedTotals}
-              showRemaining
-              compact
-              showStartingFunds
-              showBuyInTotal
-              useInCurrentRoundForOut
+            <TwoHandsBanner
+              player={twoHandsPlayer}
+              seatHolder={
+                activeGamePlayers[
+                  (nextRoundNumber - 1) % activeGamePlayers.length
+                ]
+              }
             />
 
-            <PotCard
-              type="run"
-              players={activeGamePlayers}
-              potValuePence={currentPotValues.run}
-              basePotValuePence={basePotValue}
-              selectedId={runWinnerId}
-              disabledPlayerIds={disabledPlayerIds}
-              onSelect={setRunWinnerId}
-            />
-            <PotCard
-              type="chip"
-              players={activeGamePlayers}
-              potValuePence={currentPotValues.chip}
-              basePotValuePence={basePotValue}
-              selectedId={chipWinnerId}
-              disabledPlayerIds={disabledPlayerIds}
-              onSelect={setChipWinnerId}
-            />
-            <PotCard
-              type="queen"
-              players={activeGamePlayers}
-              potValuePence={currentPotValues.queen}
-              basePotValuePence={basePotValue}
-              selectedId={queenWinnerId}
-              disabledPlayerIds={disabledPlayerIds}
-              onSelect={setQueenWinnerId}
-            />
-
-            <Text style={styles.notesLabel}>Notes (optional)</Text>
-            <TextInput
-              style={styles.notesInput}
-              placeholder="Any notes for this round..."
-              placeholderTextColor={theme.muted}
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-            />
+            {isTablet ? (
+              <TabletSplit
+                gap={splitGap}
+                leftFlex={isWide ? 1.25 : 1.1}
+                rightFlex={1}
+                left={
+                  <>
+                    {potsSection}
+                    {notesSection}
+                    {navSection}
+                  </>
+                }
+                right={leaderboard}
+              />
+            ) : (
+              <>
+                {leaderboard}
+                {potsSection}
+                {notesSection}
+              </>
+            )}
           </Animated.View>
 
-          <View style={styles.navRow}>
-            {nextRoundNumber > 1 ? (
-              <SecondaryGreenButton
-                title="Previous Round"
-                onPress={goToPreviousRound}
-                style={styles.navBtn}
-              />
-            ) : null}
-            <PrimaryGoldButton
-              title={editingRound ? 'Update Round' : 'Save Round'}
-              onPress={handleSave}
-              loading={saving}
-              style={styles.navBtn}
-            />
-          </View>
+          {!isTablet ? navSection : null}
         </ScrollView>
       </SafeAreaView>
 
@@ -429,9 +489,16 @@ const styles = StyleSheet.create({
     color: theme.muted,
     textAlign: 'center',
   },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
+  content: {},
+  potsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  potInRow: {
+    flex: 1,
+    marginBottom: 0,
   },
   carryoverBanner: {
     backgroundColor: 'rgba(217, 183, 93, 0.15)',

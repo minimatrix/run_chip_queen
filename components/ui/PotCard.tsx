@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -29,6 +29,7 @@ type PotCardProps = {
   selectedId?: string | null;
   disabledPlayerIds?: Set<string>;
   onSelect: (playerId: string | null) => void;
+  style?: ViewStyle;
 };
 
 function getCarryoverRounds(
@@ -48,6 +49,7 @@ export function PotCard({
   selectedId,
   disabledPlayerIds = new Set(),
   onSelect,
+  style,
 }: PotCardProps) {
   const carryoverRounds = getCarryoverRounds(potValuePence, basePotValuePence);
   const hasCarryover = carryoverRounds >= 1;
@@ -90,7 +92,7 @@ export function PotCard({
   };
 
   return (
-    <GlassPanel style={styles.card}>
+    <GlassPanel style={[styles.card, style]}>
       <View style={styles.header}>
         <Text style={styles.title}>{POT_LABELS[type]}</Text>
         <Animated.View

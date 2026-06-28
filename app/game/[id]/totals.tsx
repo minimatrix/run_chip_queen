@@ -20,8 +20,11 @@ import {
 } from '@/lib/calculations';
 import { useAppStore } from '@/store/useAppStore';
 import type { Player, PlayerTotal } from '@/lib/types';
+import { TabletSplit } from '@/components/ui/TabletSplit';
+import { useLayout } from '@/hooks/useLayout';
 
 export default function TotalsScreen() {
+  const { isTablet, contentPadding, splitGap } = useLayout();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
@@ -81,67 +84,103 @@ export default function TotalsScreen() {
     if (player) setBuyInPlayer(player);
   };
 
+  const summaryPanel = (
+    <GlassPanel style={styles.summary}>
+      <View style={styles.summaryRow}>
+        <SummaryStat
+          label="Per Round"
+          value={<MoneyCounter pence={roundTotal} style={styles.summaryValue} />}
+        />
+        <View style={styles.summaryDivider} />
+        <SummaryStat
+          label="Rounds"
+          value={
+            <Text style={styles.summaryValue}>
+              {activeGameRounds.length}
+            </Text>
+          }
+        />
+        <View style={styles.summaryDivider} />
+        <SummaryStat
+          label="Table Total"
+          value={<MoneyCounter pence={gameValue} style={styles.summaryValue} />}
+        />
+      </View>
+    </GlassPanel>
+  );
+
+  const actions = (
+    <>
+      <PrimaryGoldButton
+        title="Add Next Round"
+        onPress={() =>
+          router.push({
+            pathname: '/game/[id]/round',
+            params: {
+              id,
+              roundNumber: String(nextRoundNumber),
+            },
+          })
+        }
+        style={styles.btn}
+      />
+      <SecondaryGreenButton
+        title="Game History"
+        onPress={() =>
+          router.navigate({ pathname: '/game/[id]/history', params: { id } })
+        }
+        style={styles.btn}
+      />
+    </>
+  );
+
+  const leaderboard = (
+    <LeaderboardPanel
+      totals={sorted}
+      showRemaining
+      compact={!isTablet}
+      showStartingFunds
+      showBuyInTotal
+      onPlayerPress={canBuyIn ? handlePlayerPress : undefined}
+    />
+  );
+
   return (
     <FeltBackground>
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ScreenHeader title="Leaderboard" subtitle={activeGame.name} suit="♣" />
-        <ScrollView contentContainerStyle={styles.content}>
-          <GlassPanel style={styles.summary}>
-            <View style={styles.summaryRow}>
-              <SummaryStat
-                label="Per Round"
-                value={<MoneyCounter pence={roundTotal} style={styles.summaryValue} />}
-              />
-              <View style={styles.summaryDivider} />
-              <SummaryStat
-                label="Rounds"
-                value={
-                  <Text style={styles.summaryValue}>
-                    {activeGameRounds.length}
-                  </Text>
-                }
-              />
-              <View style={styles.summaryDivider} />
-              <SummaryStat
-                label="Table Total"
-                value={<MoneyCounter pence={gameValue} style={styles.summaryValue} />}
-              />
-            </View>
-          </GlassPanel>
-
-          {canBuyIn ? (
-            <Text style={styles.hint}>Tap a player to add funds</Text>
-          ) : null}
-
-          <LeaderboardPanel
-            totals={sorted}
-            showRemaining
-            compact
-            showStartingFunds
-            showBuyInTotal
-            onPlayerPress={canBuyIn ? handlePlayerPress : undefined}
-          />
-
-          <PrimaryGoldButton
-            title="Add Next Round"
-            onPress={() =>
-              router.push({
-                pathname: '/game/[id]/round',
-                params: {
-                  id,
-                  roundNumber: String(nextRoundNumber),
-                },
-              })
-            }
-            style={styles.btn}
-          />
-          <SecondaryGreenButton
-            title="Game History"
-            onPress={() =>
-              router.navigate({ pathname: '/game/[id]/history', params: { id } })
-            }
-            style={styles.btn}
-          />
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { padding: contentPadding, paddingBottom: 40 },
+          ]}
+        >
+          {isTablet ? (
+            <TabletSplit
+              gap={splitGap}
+              leftFlex={0.9}
+              rightFlex={1.1}
+              left={
+                <>
+                  {summaryPanel}
+                  {canBuyIn ? (
+                    <Text style={styles.hint}>Tap a player to add funds</Text>
+                  ) : null}
+                  {actions}
+                </>
+              }
+              right={leaderboard}
+            />
+          ) : (
+            <>
+              {summaryPanel}
+              {canBuyIn ? (
+                <Text style={styles.hint}>Tap a player to add funds</Text>
+              ) : null}
+              {leaderboard}
+              {actions}
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
 
@@ -183,10 +222,7 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
   },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
+  content: {},
   summary: {
     padding: 16,
     marginBottom: 16,

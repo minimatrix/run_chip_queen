@@ -5,8 +5,10 @@ import { PlusCircle, List, Trophy, MoreHorizontal } from 'lucide-react-native';
 import { useAppStore } from '@/store/useAppStore';
 import { theme, fonts } from '@/constants/theme';
 import { FeltBackground } from '@/components/ui/FeltBackground';
+import { useLayout } from '@/hooks/useLayout';
 
 export default function GameLayout() {
+  const { isTablet } = useLayout();
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const activeGame = useAppStore((s) => s.activeGame);
@@ -38,12 +40,13 @@ export default function GameLayout() {
           backgroundColor: theme.dark,
           borderTopColor: 'rgba(217, 183, 93, 0.25)',
           borderTopWidth: 1,
-          height: 88,
+          height: isTablet ? 72 : 88,
+          paddingTop: isTablet ? 4 : 6,
         },
         tabBarLabelStyle: {
           fontFamily: fonts.sansMedium,
-          fontSize: 11,
-          marginBottom: 8,
+          fontSize: isTablet ? 12 : 11,
+          marginBottom: isTablet ? 6 : 8,
         },
       }}
     >

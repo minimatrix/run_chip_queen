@@ -17,6 +17,7 @@ type GameRoundHistoryListProps = {
   onDeleteRound?: (roundId: string) => void;
   embedded?: boolean;
   contentContainerStyle?: ViewStyle;
+  columns?: 1 | 2;
 };
 
 export function GameRoundHistoryList({
@@ -29,6 +30,7 @@ export function GameRoundHistoryList({
   onDeleteRound,
   embedded = false,
   contentContainerStyle,
+  columns = 1,
 }: GameRoundHistoryListProps) {
   const getPlayerName = (playerId?: string | null) => {
     if (!playerId) return '-';
@@ -106,6 +108,17 @@ export function GameRoundHistoryList({
     );
   };
 
+  const wrapForColumns = (node: React.ReactNode, key: string) => {
+    if (columns === 1) {
+      return <View key={key}>{node}</View>;
+    }
+    return (
+      <View key={key} style={styles.gridItem}>
+        {node}
+      </View>
+    );
+  };
+
   if (rounds.length === 0) {
     return (
       <PremiumEmptyState
@@ -118,10 +131,16 @@ export function GameRoundHistoryList({
 
   if (embedded) {
     return (
-      <View style={[styles.embedded, contentContainerStyle]}>
-        {sortedRounds.map((round, index) => (
-          <View key={round.id}>{renderRound(round, index)}</View>
-        ))}
+      <View
+        style={[
+          styles.embedded,
+          columns === 2 && styles.embeddedGrid,
+          contentContainerStyle,
+        ]}
+      >
+        {sortedRounds.map((round, index) =>
+          wrapForColumns(renderRound(round, index), round.id),
+        )}
       </View>
     );
   }
@@ -129,10 +148,17 @@ export function GameRoundHistoryList({
   return (
     <FlatList
       data={sortedRounds}
+      key={columns}
       keyExtractor={(item) => item.id}
+      numColumns={columns}
+      columnWrapperStyle={columns === 2 ? styles.columnWrapper : undefined}
       contentContainerStyle={[styles.list, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
-      renderItem={({ item, index }) => renderRound(item, index)}
+      renderItem={({ item, index }) => (
+        <View style={columns === 2 ? styles.flatGridItem : undefined}>
+          {renderRound(item, index)}
+        </View>
+      )}
     />
   );
 }
@@ -144,5 +170,22 @@ const styles = StyleSheet.create({
   },
   embedded: {
     gap: 0,
+  },
+  embeddedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  gridItem: {
+    flexGrow: 1,
+    flexBasis: '46%',
+    minWidth: 280,
+  },
+  columnWrapper: {
+    gap: 12,
+    marginBottom: 12,
+  },
+  flatGridItem: {
+    flex: 1,
   },
 });

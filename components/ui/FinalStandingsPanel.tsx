@@ -9,15 +9,22 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 
 type FinalStandingsPanelProps = {
   totals: PlayerTotal[];
+  columns?: 1 | 2;
 };
 
-export function FinalStandingsPanel({ totals }: FinalStandingsPanelProps) {
+export function FinalStandingsPanel({
+  totals,
+  columns = 1,
+}: FinalStandingsPanelProps) {
   const sorted = [...totals].sort((a, b) => b.remaining - a.remaining);
 
   return (
-    <View style={styles.list}>
+    <View style={[styles.list, columns === 2 && styles.listGrid]}>
       {sorted.map((row, index) => (
-        <GlassPanel key={row.playerId} style={styles.card}>
+        <GlassPanel
+          key={row.playerId}
+          style={[styles.card, columns === 2 && styles.cardGrid]}
+        >
           <View style={styles.header}>
             <Text style={styles.medal}>{MEDALS[index] ?? `${index + 1}`}</Text>
             <PokerChip
@@ -87,8 +94,17 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 14,
   },
+  listGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   card: {
     padding: 14,
+  },
+  cardGrid: {
+    flexGrow: 1,
+    flexBasis: '46%',
+    minWidth: 280,
   },
   header: {
     flexDirection: 'row',

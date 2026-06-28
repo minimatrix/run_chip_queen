@@ -3,6 +3,7 @@ import {
   calculatePlayerTotals,
   calculatePlayerTotalsForRoundEntry,
   getPlayersNeedingBuyInPrompt,
+  getTwoHandsPlayerForRound,
 } from './calculations';
 import type { Game, Player, PlayerBuyIn, Round } from './types';
 
@@ -17,6 +18,9 @@ const game: Game = {
 
 const alice: Player = { id: 'p1', name: 'Alice', color: '#E53935' };
 const bob: Player = { id: 'p2', name: 'Bob', color: '#1E88E5' };
+const carol: Player = { id: 'p3', name: 'Carol', color: '#43A047' };
+const dave: Player = { id: 'p4', name: 'Dave', color: '#FB8C00' };
+const fourPlayers = [alice, bob, carol, dave];
 
 function makeRound(
   roundNumber: number,
@@ -45,6 +49,56 @@ function makeBuyIn(
     createdAt: '2024-01-01T00:00:00.000Z',
   };
 }
+
+describe('getTwoHandsPlayerForRound', () => {
+  it('assigns two hands to the seat holder for the round number', () => {
+    expect(
+      getTwoHandsPlayerForRound(game, fourPlayers, [], 1, [])?.id,
+    ).toBe(alice.id);
+    expect(
+      getTwoHandsPlayerForRound(game, fourPlayers, [], 2, [])?.id,
+    ).toBe(bob.id);
+    expect(
+      getTwoHandsPlayerForRound(game, fourPlayers, [], 5, [])?.id,
+    ).toBe(alice.id);
+  });
+
+  it('substitutes the next active player when the seat holder is out', () => {
+    const solventGame: Game = { ...game, startingBalancePence: 500 };
+    const round1 = makeRound(1, { chipWinnerId: carol.id });
+
+    expect(
+      getTwoHandsPlayerForRound(solventGame, fourPlayers, [round1], 2, [])?.id,
+    ).toBe(carol.id);
+  });
+
+  it('gives two hands back to the seat holder when they buy in for that round', () => {
+    const solventGame: Game = { ...game, startingBalancePence: 500 };
+    const round1 = makeRound(1, { chipWinnerId: carol.id });
+    const buyIns = [makeBuyIn(bob.id, 2, 300)];
+
+    expect(
+      getTwoHandsPlayerForRound(solventGame, fourPlayers, [round1], 2, buyIns)
+        ?.id,
+    ).toBe(bob.id);
+  });
+
+  it('gives the seat holder their normal turn after a later buy-in', () => {
+    const solventGame: Game = { ...game, startingBalancePence: 500 };
+    const round1 = makeRound(1, { chipWinnerId: carol.id });
+    const buyIns = [makeBuyIn(bob.id, 6, 300)];
+
+    expect(
+      getTwoHandsPlayerForRound(
+        solventGame,
+        fourPlayers,
+        [round1],
+        6,
+        buyIns,
+      )?.id,
+    ).toBe(bob.id);
+  });
+});
 
 describe('calculatePlayerTotalsForRoundEntry', () => {
   it('records starting funds as the game starting balance', () => {
